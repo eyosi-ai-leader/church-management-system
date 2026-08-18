@@ -1,0 +1,4 @@
+-- we use this SQL script to create the necessary tables for authentication in our database in the future if there have a change. 
+-- The script includes the creation of tables for users, roles, and permissions, as well as the relationships between them. 
+-- It also sets up indexes and constraints to ensure data integrity and optimize query performance. 
+-- in the future we use this files currnty we already have a authentication system in place, and this script serves as a foundation for managing user access and permissions within the application.
