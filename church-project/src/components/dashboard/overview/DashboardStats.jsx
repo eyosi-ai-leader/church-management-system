@@ -7,9 +7,20 @@ import {
   UserPlus,
 } from "lucide-react";
 
-import StatCard from "./StatCard";
 import { useEffect, useState } from "react";
+
+import StatCard from "./StatCard";
 import { getDashboardOverview } from "@/lib/dashboardApi";
+
+function getAuthToken() {
+  const cookies = document.cookie.split("; ");
+
+  const tokenCookie = cookies.find((cookie) =>
+    cookie.startsWith("token=")
+  );
+
+  return tokenCookie ? tokenCookie.split("=")[1] : null;
+}
 
 export default function DashboardStats() {
   const [overview, setOverview] = useState(null);
@@ -19,7 +30,7 @@ export default function DashboardStats() {
   useEffect(() => {
     async function loadDashboardOverview() {
       try {
-        const token = localStorage.getItem("token");
+        const token = getAuthToken();
 
         if (!token) {
           throw new Error("Authentication token not found");
@@ -30,7 +41,10 @@ export default function DashboardStats() {
         setOverview(response.data);
       } catch (error) {
         console.error("Dashboard overview error:", error);
-        setError(error.message);
+
+        setError(
+          error.message || "Failed to load dashboard statistics."
+        );
       } finally {
         setLoading(false);
       }

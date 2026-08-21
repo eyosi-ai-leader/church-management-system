@@ -12,7 +12,11 @@ export async function getDashboardOverview(token) {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to load dashboard overview");
+    const result = await response.json().catch(() => null);
+
+    throw new Error(
+      result?.message || "Failed to load dashboard overview"
+    );
   }
 
   return response.json();

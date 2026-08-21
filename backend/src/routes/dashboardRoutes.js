@@ -1,15 +1,17 @@
 const express = require("express");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
 const dashboardController = require("../controllers/dashboardController");
 
 const router = express.Router();
 
+/*
+ * Dashboard
+ * All authenticated users can access the dashboard.
+ */
 router.get(
   "/overview",
   authMiddleware,
-  roleMiddleware(1, 2, 3),
   dashboardController.getDashboardOverview
 );
 
