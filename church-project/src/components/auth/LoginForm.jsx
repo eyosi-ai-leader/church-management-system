@@ -180,11 +180,12 @@ export default function LoginForm() {
 <p className="mt-7 text-center text-sm text-slate-500">
   Don&apos;t have an account?{" "}
   <button
-    type="button"
-    className="font-semibold text-indigo-600 transition hover:text-indigo-700"
-  >
-    Register
-  </button>
+  type="button"
+  onClick={() => router.push("/register")}
+  className="font-semibold text-indigo-600 hover:text-indigo-700"
+>
+  Register
+</button>
 </p>
     </div>
   );
