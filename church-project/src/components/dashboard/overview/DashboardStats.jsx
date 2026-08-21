@@ -56,28 +56,28 @@ export default function DashboardStats() {
   const stats = [
     {
       title: "Total Members",
-      value: overview?.totalMembers ?? 0,
+      value: overview?.members?.total ?? 0,
       change: "—",
       description: "Total registered members",
       icon: Users,
     },
     {
       title: "Active Members",
-      value: overview?.activeMembers ?? 0,
+      value: overview?.members?.active ?? 0,
       change: "—",
       description: "Currently active members",
       icon: UserCheck,
     },
     {
       title: "Inactive Members",
-      value: overview?.inactiveMembers ?? 0,
+      value: overview?.members?.inactive ?? 0,
       change: "—",
       description: "Currently inactive members",
       icon: UserX,
     },
     {
       title: "New Members Today",
-      value: overview?.newMembersToday ?? 0,
+      value: overview?.members?.newToday ?? 0,
       change: "Today",
       description: "Members registered today",
       icon: UserPlus,

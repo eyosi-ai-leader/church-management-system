@@ -2,7 +2,9 @@ const dashboardService = require("../services/dashboardService");
 
 async function getDashboardOverview(req, res, next) {
   try {
-    const overview = await dashboardService.getDashboardOverview();
+    const overview = await dashboardService.getDashboardOverview(
+      req.user
+    );
 
     res.status(200).json({
       success: true,
