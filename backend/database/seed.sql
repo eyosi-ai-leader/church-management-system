@@ -10,6 +10,7 @@
 INSERT INTO roles (name, description) VALUES
 ('Admin', 'System Administrator with full access'),
 ('Pastor', 'Church Pastor'),
+('Church Elder', 'Church Elder with operational member oversight'),
 ('Ministry Leader', 'Leader of a ministry'),
 ('Member', 'Regular church member');
 
@@ -50,12 +51,17 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 (2,7),
 (2,8);
 
--- Ministry Leader (role_id = 3)
+-- Church Elder (role_id = 3)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3,4),
-(3,5),
+(3,3),
 (3,8);
 
--- Member (role_id = 4)
+-- Ministry Leader (role_id = 4)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
+(4,4),
+(4,5),
 (4,8);
+
+-- Member (role_id = 5)
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(5,8);

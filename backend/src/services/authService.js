@@ -30,7 +30,7 @@ const registerUser = async (userData) => {
   const hashedPassword = await hashPassword(password);
 
   // Default role = Member
-  const roleId = 4;
+  const roleId = 5;
 
   // Save user
   const userId = await createUser({
