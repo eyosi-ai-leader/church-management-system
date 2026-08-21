@@ -69,7 +69,9 @@ export default function RegisterForm() {
         router.push("/login");
       }, 1500);
     } catch (error) {
-      setError(error.message || "Unable to create your account.");
+      setError(
+        error.message || "Unable to create your account."
+      );
     } finally {
       setLoading(false);
     }
@@ -77,12 +79,14 @@ export default function RegisterForm() {
 
   return (
     <div>
+      {/* Error */}
       {error && (
         <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
 
+      {/* Success */}
       {success && (
         <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
           {success}
@@ -90,8 +94,10 @@ export default function RegisterForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Name */}
+
+        {/* First Name + Last Name */}
         <div className="grid gap-5 sm:grid-cols-2">
+
           <div>
             <label
               htmlFor="firstName"
@@ -145,6 +151,7 @@ export default function RegisterForm() {
               />
             </div>
           </div>
+
         </div>
 
         {/* Email */}
@@ -204,7 +211,9 @@ export default function RegisterForm() {
 
             <button
               type="button"
-              onClick={() => setShowPassword((previous) => !previous)}
+              onClick={() =>
+                setShowPassword((previous) => !previous)
+              }
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
             >
               {showPassword ? (
@@ -249,7 +258,9 @@ export default function RegisterForm() {
             <button
               type="button"
               onClick={() =>
-                setShowConfirmPassword((previous) => !previous)
+                setShowConfirmPassword(
+                  (previous) => !previous
+                )
               }
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
             >
@@ -292,6 +303,7 @@ export default function RegisterForm() {
         </button>
       </form>
 
+      {/* Login Link */}
       <p className="mt-7 text-center text-sm text-slate-500">
         Already have an account?{" "}
         <button

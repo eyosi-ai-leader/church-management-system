@@ -1,10 +1,28 @@
+import { Church } from "lucide-react";
+
 export default function RegisterHeader() {
   return (
     <div className="mb-8 text-center">
-      <p className="mb-3 text-sm font-semibold text-indigo-600">
-        Church Management Portal
-      </p>
+      {/* Brand */}
+      <div className="mb-8 flex justify-center">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
+            <Church size={22} strokeWidth={1.8} />
+          </div>
 
+          <div className="text-left">
+            <p className="text-sm font-bold tracking-wide text-slate-950">
+              FARES CHURCH
+            </p>
+
+            <p className="text-xs text-slate-400">
+              Church Management Portal
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Register Header */}
       <h1 className="text-3xl font-bold tracking-tight text-slate-900">
         Create your account
       </h1>
