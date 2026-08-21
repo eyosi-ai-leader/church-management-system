@@ -1,36 +1,48 @@
-import LoginBrand from "./LoginBrand";
 import LoginForm from "./LoginForm";
+import { Church } from "lucide-react";
 
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md">
 
-        {/* <LoginBrand /> */}
+          {/* Brand */}
+          <div className="mb-8 flex justify-center">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
+                <Church size={22} strokeWidth={1.8} />
+              </div>
 
-        <section className="flex items-center justify-center px-6 py-12 sm:px-10 lg:px-16">
-          <div className="w-full max-w-md">
+              <div>
+                <p className="text-sm font-bold tracking-wide text-slate-950">
+                  FARES CHURCH
+                </p>
 
-            <div className="mb-8">
-              <p className="mb-3 text-sm font-semibold text-indigo-600">
-                Church Management Portal
-              </p>
-
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Welcome back
-              </h1>
-
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Sign in to manage your church community.
-              </p>
+                <p className="text-xs text-slate-400">
+                  Church Management Portal
+                </p>
+              </div>
             </div>
-
-            <LoginForm />
-
           </div>
-        </section>
 
-      </div>
+          {/* Login Header */}
+          <div className="mb-8 text-center">
+
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Welcome back
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Sign in to manage your church community.
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <LoginForm />
+
+        </div>
+      </section>
     </main>
   );
 }
