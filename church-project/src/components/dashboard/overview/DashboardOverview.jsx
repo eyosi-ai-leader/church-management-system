@@ -4,10 +4,10 @@ import MemberGrowth from "./MemberGrowth";
 import RecentActivity from "./RecentActivity";
 import AIInsight from "./AIInsight";
 
-export default function DashboardOverview() {
+export default function DashboardOverview({ currentDate }) {
   return (
     <div className="space-y-6">
-      <DashboardWelcome />
+      <DashboardWelcome currentDate={currentDate} />
 
       <DashboardStats />
 

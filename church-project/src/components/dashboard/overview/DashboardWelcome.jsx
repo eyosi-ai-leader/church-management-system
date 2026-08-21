@@ -1,11 +1,11 @@
 import { Activity } from "lucide-react";
 
-export default function DashboardWelcome() {
+export default function DashboardWelcome({ currentDate }) {
   return (
     <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div>
         <p className="mb-1 text-sm font-medium text-slate-400">
-          Friday, August 21, 2026
+          {currentDate}
         </p>
 
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
