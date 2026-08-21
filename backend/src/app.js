@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const healthRoutes = require("./routes/healthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const memberRoutes = require("./routes/memberRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
@@ -32,7 +33,7 @@ app.use(morgan("dev"));
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
-
+app.use("/api/dashboard", dashboardRoutes);
 // 404 Handler
 app.use((req, res) => {
   res.status(404).json({
