@@ -69,6 +69,40 @@ async function getDashboardOverview(user) {
     `);
 
     // ------------------------------------------
+    // Member Growth - Last 8 Months
+    // ------------------------------------------
+    const [growthRows] = await db.query(`
+      SELECT
+        DATE_FORMAT(months.month_date, '%b') AS month,
+        (
+          SELECT COUNT(*)
+          FROM members m
+          WHERE m.created_at < DATE_ADD(
+            months.month_date,
+            INTERVAL 1 MONTH
+          )
+        ) AS value
+      FROM (
+        SELECT
+          DATE_FORMAT(
+            DATE_SUB(CURDATE(), INTERVAL 7 MONTH),
+            '%Y-%m-01'
+          ) + INTERVAL seq.month_offset MONTH AS month_date
+        FROM (
+          SELECT 0 AS month_offset
+          UNION ALL SELECT 1
+          UNION ALL SELECT 2
+          UNION ALL SELECT 3
+          UNION ALL SELECT 4
+          UNION ALL SELECT 5
+          UNION ALL SELECT 6
+          UNION ALL SELECT 7
+        ) AS seq
+      ) AS months
+      ORDER BY months.month_date ASC
+    `);
+
+    // ------------------------------------------
     // Return Dashboard
     // ------------------------------------------
     return {
@@ -92,6 +126,11 @@ async function getDashboardOverview(user) {
         title: activity.title,
         description: activity.description,
         createdAt: activity.createdAt,
+      })),
+
+      memberGrowth: growthRows.map((item) => ({
+        month: item.month,
+        value: Number(item.value || 0),
       })),
     };
   }
