@@ -1,41 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { getDashboardOverview } from "@/lib/dashboardApi";
-
-export default function MemberGrowth() {
-  const [growthData, setGrowthData] = useState([]);
-  const [totalMembers, setTotalMembers] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadMemberGrowth() {
-      try {
-        const response = await getDashboardOverview();
-
-        const data = response?.data;
-
-        setGrowthData(data?.memberGrowth || []);
-        setTotalMembers(data?.members?.total || 0);
-      } catch (error) {
-        console.error("Member growth error:", error);
-
-        setError(
-          error.message || "Failed to load member growth."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMemberGrowth();
-  }, []);
+export default function MemberGrowth({
+  dashboardData,
+  loading,
+  error,
+}) {
+  const growthData = dashboardData?.memberGrowth || [];
+  const totalMembers = dashboardData?.members?.total || 0;
 
   const maxValue =
     growthData.length > 0
-      ? Math.max(...growthData.map((item) => item.value), 1)
+      ? Math.max(
+          ...growthData.map((item) => Number(item.value) || 0),
+          1
+        )
       : 1;
 
   if (loading) {
@@ -94,7 +72,7 @@ export default function MemberGrowth() {
 
           <div className="mt-1 flex items-baseline gap-3">
             <h2 className="text-2xl font-bold text-slate-900">
-              {totalMembers.toLocaleString()}
+              {Number(totalMembers).toLocaleString()}
             </h2>
 
             <span className="text-xs font-semibold text-emerald-600">
@@ -121,17 +99,19 @@ export default function MemberGrowth() {
         ) : (
           <div className="flex h-56 items-end gap-3 sm:gap-5">
             {growthData.map((item) => {
+              const value = Number(item.value) || 0;
+
               const height =
-                item.value === 0
+                value === 0
                   ? 2
                   : Math.max(
-                      (item.value / maxValue) * 100,
+                      (value / maxValue) * 100,
                       8
                     );
 
               return (
                 <div
-                  key={`${item.month}-${item.value}`}
+                  key={`${item.month}-${value}`}
                   className="flex h-full flex-1 flex-col justify-end"
                 >
                   <div className="relative flex h-full items-end">
@@ -140,7 +120,7 @@ export default function MemberGrowth() {
                       style={{
                         height: `${height}%`,
                       }}
-                      title={`${item.value} members`}
+                      title={`${value} members`}
                     />
                   </div>
 

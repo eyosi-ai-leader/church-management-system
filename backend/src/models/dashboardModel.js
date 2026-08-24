@@ -102,9 +102,6 @@ async function getDashboardOverview(user) {
       ORDER BY months.month_date ASC
     `);
 
-    // ------------------------------------------
-    // Return Dashboard
-    // ------------------------------------------
     return {
       role: "Admin",
 
@@ -126,6 +123,225 @@ async function getDashboardOverview(user) {
         title: activity.title,
         description: activity.description,
         createdAt: activity.createdAt,
+      })),
+
+      memberGrowth: growthRows.map((item) => ({
+        month: item.month,
+        value: Number(item.value || 0),
+      })),
+    };
+  }
+
+  // ==========================================
+  // PASTOR DASHBOARD
+  // roleId = 2
+  // ==========================================
+  if (user.roleId === 2) {
+    const [memberStats] = await db.query(`
+      SELECT
+        COUNT(*) AS totalMembers,
+
+        SUM(
+          CASE
+            WHEN status = 'Active' THEN 1
+            ELSE 0
+          END
+        ) AS activeMembers,
+
+        SUM(
+          CASE
+            WHEN status = 'Inactive' THEN 1
+            ELSE 0
+          END
+        ) AS inactiveMembers,
+
+        SUM(
+          CASE
+            WHEN DATE(created_at) = CURDATE() THEN 1
+            ELSE 0
+          END
+        ) AS newMembersToday
+
+      FROM members
+    `);
+
+    const [recentMembers] = await db.query(`
+      SELECT
+        m.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        m.status,
+        m.created_at AS createdAt
+      FROM members m
+      INNER JOIN users u
+        ON u.id = m.user_id
+      ORDER BY m.created_at DESC
+      LIMIT 3
+    `);
+
+    const [growthRows] = await db.query(`
+      SELECT
+        DATE_FORMAT(months.month_date, '%b') AS month,
+        (
+          SELECT COUNT(*)
+          FROM members m
+          WHERE m.created_at < DATE_ADD(
+            months.month_date,
+            INTERVAL 1 MONTH
+          )
+        ) AS value
+      FROM (
+        SELECT
+          DATE_FORMAT(
+            DATE_SUB(CURDATE(), INTERVAL 7 MONTH),
+            '%Y-%m-01'
+          ) + INTERVAL seq.month_offset MONTH AS month_date
+        FROM (
+          SELECT 0 AS month_offset
+          UNION ALL SELECT 1
+          UNION ALL SELECT 2
+          UNION ALL SELECT 3
+          UNION ALL SELECT 4
+          UNION ALL SELECT 5
+          UNION ALL SELECT 6
+          UNION ALL SELECT 7
+        ) AS seq
+      ) AS months
+      ORDER BY months.month_date ASC
+    `);
+
+    return {
+      role: "Pastor",
+
+      members: {
+        total: Number(memberStats[0].totalMembers || 0),
+        active: Number(memberStats[0].activeMembers || 0),
+        inactive: Number(memberStats[0].inactiveMembers || 0),
+        newToday: Number(memberStats[0].newMembersToday || 0),
+      },
+
+      recentActivity: recentMembers.map((member) => ({
+        id: member.id,
+        title: "Church member",
+        description: `${member.first_name} ${member.last_name}`,
+        email: member.email,
+        status: member.status,
+        createdAt: member.createdAt,
+      })),
+
+      memberGrowth: growthRows.map((item) => ({
+        month: item.month,
+        value: Number(item.value || 0),
+      })),
+    };
+  }
+
+  // ==========================================
+  // CHURCH ELDER DASHBOARD
+  // roleId = 3
+  // ==========================================
+  if (user.roleId === 3) {
+    // ------------------------------------------
+    // Member Statistics
+    // ------------------------------------------
+    const [memberStats] = await db.query(`
+      SELECT
+        COUNT(*) AS totalMembers,
+
+        SUM(
+          CASE
+            WHEN status = 'Active' THEN 1
+            ELSE 0
+          END
+        ) AS activeMembers,
+
+        SUM(
+          CASE
+            WHEN status = 'Inactive' THEN 1
+            ELSE 0
+          END
+        ) AS inactiveMembers,
+
+        SUM(
+          CASE
+            WHEN DATE(created_at) = CURDATE() THEN 1
+            ELSE 0
+          END
+        ) AS newMembersToday
+
+      FROM members
+    `);
+
+    // ------------------------------------------
+    // Recent Members
+    // ------------------------------------------
+    const [recentMembers] = await db.query(`
+      SELECT
+        m.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        m.status,
+        m.created_at AS createdAt
+      FROM members m
+      INNER JOIN users u
+        ON u.id = m.user_id
+      ORDER BY m.created_at DESC
+      LIMIT 3
+    `);
+
+    // ------------------------------------------
+    // Member Growth - Last 8 Months
+    // ------------------------------------------
+    const [growthRows] = await db.query(`
+      SELECT
+        DATE_FORMAT(months.month_date, '%b') AS month,
+        (
+          SELECT COUNT(*)
+          FROM members m
+          WHERE m.created_at < DATE_ADD(
+            months.month_date,
+            INTERVAL 1 MONTH
+          )
+        ) AS value
+      FROM (
+        SELECT
+          DATE_FORMAT(
+            DATE_SUB(CURDATE(), INTERVAL 7 MONTH),
+            '%Y-%m-01'
+          ) + INTERVAL seq.month_offset MONTH AS month_date
+        FROM (
+          SELECT 0 AS month_offset
+          UNION ALL SELECT 1
+          UNION ALL SELECT 2
+          UNION ALL SELECT 3
+          UNION ALL SELECT 4
+          UNION ALL SELECT 5
+          UNION ALL SELECT 6
+          UNION ALL SELECT 7
+        ) AS seq
+      ) AS months
+      ORDER BY months.month_date ASC
+    `);
+
+    return {
+      role: "Church Elder",
+
+      members: {
+        total: Number(memberStats[0].totalMembers || 0),
+        active: Number(memberStats[0].activeMembers || 0),
+        inactive: Number(memberStats[0].inactiveMembers || 0),
+        newToday: Number(memberStats[0].newMembersToday || 0),
+      },
+
+      recentActivity: recentMembers.map((member) => ({
+        id: member.id,
+        title: "Church member",
+        description: `${member.first_name} ${member.last_name}`,
+        email: member.email,
+        status: member.status,
+        createdAt: member.createdAt,
       })),
 
       memberGrowth: growthRows.map((item) => ({
