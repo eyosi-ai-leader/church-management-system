@@ -65,7 +65,7 @@ async function getDashboardOverview(user) {
         u.created_at AS createdAt
       FROM users u
       ORDER BY u.created_at DESC
-      LIMIT 5
+      LIMIT 3
     `);
 
     // ------------------------------------------
