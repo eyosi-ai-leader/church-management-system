@@ -47,10 +47,16 @@ const getMemberById = async (memberId) => {
       m.id,
       m.user_id,
       m.member_number,
+
       u.first_name,
       u.last_name,
       u.email,
+
+      u.role_id,
+      r.name AS role_name,
+
       u.phone AS user_phone,
+
       m.gender,
       m.phone,
       m.date_of_birth,
@@ -59,10 +65,17 @@ const getMemberById = async (memberId) => {
       m.status,
       m.created_at,
       m.updated_at
+
     FROM members m
+
     INNER JOIN users u
       ON m.user_id = u.id
+
+    LEFT JOIN roles r
+      ON u.role_id = r.id
+
     WHERE m.id = ?
+
     LIMIT 1
   `;
 
@@ -127,149 +140,22 @@ const deleteMember = async (memberId) => {
   return result;
 };
 
-// /**
-//  * Get all members with pagination,
-//  * optional search, status filter, and role filter.
-//  *
-//  * Search fields:
-//  * - first_name
-//  * - last_name
-//  * - email
-//  * - member_number
-//  * - phone
-//  *
-//  * Status values:
-//  * - Active
-//  * - Inactive
-//  *
-//  * Role IDs:
-//  * - 1 = Admin
-//  * - 2 = Pastor
-//  * - 3 = Ministry Leader
-//  * - 4 = Member
-//  */
-// const getAllMembers = async (
-//   limit,
-//   offset,
-//   search = "",
-//   status = "",
-//   roleId = ""
-// ) => {
-//   let query = `
-//     SELECT
-//       m.id,
-//       m.user_id,
-//       m.member_number,
-//       u.first_name,
-//       u.last_name,
-//       u.email,
-//       u.role_id,
-//       m.gender,
-//       m.phone,
-//       m.date_of_birth,
-//       m.baptism_date,
-//       m.address,
-//       m.status,
-//       m.created_at,
-//       m.updated_at
-//     FROM members m
-//     INNER JOIN users u
-//       ON m.user_id = u.id
-//   `;
-
-//   const conditions = [];
-//   const queryParams = [];
-
-//   /**
-//    * Search condition
-//    */
-//   if (search) {
-//     conditions.push(`
-//       (
-//         u.first_name LIKE ?
-//         OR u.last_name LIKE ?
-//         OR u.email LIKE ?
-//         OR m.member_number LIKE ?
-//         OR m.phone LIKE ?
-//       )
-//     `);
-
-//     const searchTerm = `%${search}%`;
-
-//     queryParams.push(
-//       searchTerm,
-//       searchTerm,
-//       searchTerm,
-//       searchTerm,
-//       searchTerm
-//     );
-//   }
-
-//   /**
-//    * Status condition
-//    */
-//   if (status) {
-//     conditions.push("m.status = ?");
-//     queryParams.push(status);
-//   }
-
-//   /**
-//    * Role condition
-//    */
-//   if (roleId) {
-//     conditions.push("u.role_id = ?");
-//     queryParams.push(roleId);
-//   }
-
-//   /**
-//    * Add WHERE only when there are conditions.
-//    */
-//   if (conditions.length > 0) {
-//     query += `
-//       WHERE ${conditions.join(" AND ")}
-//     `;
-//   }
-
-//   query += `
-//     ORDER BY m.id ASC
-//     LIMIT ? OFFSET ?
-//   `;
-
-//   queryParams.push(limit, offset);
-
-//   const [rows] = await db.execute(query, queryParams);
-
-//   return rows;
-// };
-
 /**
- * Get all members with pagination,
- * optional search, status filter, role filter,
- * and sorting.
+ * Get all members with:
  *
- * Search fields:
- * - first_name
- * - last_name
- * - email
- * - member_number
- * - phone
- *
- * Status values:
- * - Active
- * - Inactive
+ * - Pagination
+ * - Search
+ * - Status filter
+ * - Role filter
+ * - Sorting
  *
  * Role IDs:
- * - 1 = Admin
- * - 2 = Pastor
- * - 3 = Ministry Leader
- * - 4 = Member
  *
- * Sortable fields:
- * - first_name
- * - last_name
- * - member_number
- * - email
- * - created_at
+ * 1 = Admin
+ * 2 = Pastor
+ * 3 = Church Elder
+ * 4 = Ministry Leader
+ * 5 = Member
  */
 const getAllMembers = async (
   limit,
@@ -281,147 +167,43 @@ const getAllMembers = async (
   sortOrder = "asc"
 ) => {
   let query = `
-    SELECT 
-      m.id, 
-      m.user_id, 
-      m.member_number, 
-      u.first_name, 
-      u.last_name, 
-      u.email, 
-      u.role_id, 
-      m.gender, 
-      m.phone, 
-      m.date_of_birth, 
-      m.baptism_date, 
-      m.address, 
-      m.status, 
-      m.created_at, 
-      m.updated_at 
-    FROM members m 
-    INNER JOIN users u 
-      ON m.user_id = u.id 
-  `;
+    SELECT
+      m.id,
+      m.user_id,
+      m.member_number,
 
-  const conditions = [];
-  const queryParams = [];
+      u.first_name,
+      u.last_name,
+      u.email,
 
-  /**
-   * Search condition
-   */
-  if (search) {
-    conditions.push(`
-      (
-        u.first_name LIKE ? 
-        OR u.last_name LIKE ? 
-        OR u.email LIKE ? 
-        OR m.member_number LIKE ? 
-        OR m.phone LIKE ? 
-      )
-    `);
+      u.role_id,
+      r.name AS role_name,
 
-    const searchTerm = `%${search}%`;
+      u.phone AS user_phone,
 
-    queryParams.push(
-      searchTerm,
-      searchTerm,
-      searchTerm,
-      searchTerm,
-      searchTerm
-    );
-  }
+      m.gender,
+      m.phone,
+      m.date_of_birth,
+      m.baptism_date,
+      m.address,
+      m.status,
+      m.created_at,
+      m.updated_at
 
-  /**
-   * Status condition
-   */
-  if (status) {
-    conditions.push("m.status = ?");
-    queryParams.push(status);
-  }
-
-  /**
-   * Role condition
-   */
-  if (roleId) {
-    conditions.push("u.role_id = ?");
-    queryParams.push(roleId);
-  }
-
-  /**
-   * Add WHERE only when there are conditions.
-   */
-  if (conditions.length > 0) {
-    query += `
-      WHERE ${conditions.join(" AND ")}
-    `;
-  }
-
-  /**
-   * Allowed sorting fields.
-   *
-   * This whitelist prevents SQL injection
-   * through the sortBy parameter.
-   */
-  const allowedSortFields = {
-    first_name: "u.first_name",
-    last_name: "u.last_name",
-    member_number: "m.member_number",
-    email: "u.email",
-    created_at: "m.created_at",
-  };
-
-  /**
-   * Use created_at as the default
-   * when sortBy is not provided.
-   */
-  const sortColumn =
-    allowedSortFields[sortBy] || allowedSortFields.created_at;
-
-  /**
-   * Only allow ASC or DESC.
-   */
-  const sortDirection =
-    sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-
-  /**
-   * Sorting + pagination
-   */
-  query += `
-    ORDER BY ${sortColumn} ${sortDirection}
-    LIMIT ? OFFSET ?
-  `;
-
-  queryParams.push(limit, offset);
-
-  const [rows] = await db.execute(query, queryParams);
-
-  return rows;
-};
-
-/**
- * Count members with optional search,
- * status filter, and role filter.
- *
- * The conditions must match getAllMembers()
- * so pagination returns the correct total
- * and totalPages.
- */
-const countMembers = async (
-  search = "",
-  status = "",
-  roleId = ""
-) => {
-  let query = `
-    SELECT COUNT(*) AS total
     FROM members m
+
     INNER JOIN users u
       ON m.user_id = u.id
+
+    LEFT JOIN roles r
+      ON u.role_id = r.id
   `;
 
   const conditions = [];
   const queryParams = [];
 
   /**
-   * Search condition
+   * Search
    */
   if (search) {
     conditions.push(`
@@ -446,7 +228,7 @@ const countMembers = async (
   }
 
   /**
-   * Status condition
+   * Status filter
    */
   if (status) {
     conditions.push("m.status = ?");
@@ -454,7 +236,7 @@ const countMembers = async (
   }
 
   /**
-   * Role condition
+   * Role filter
    */
   if (roleId) {
     conditions.push("u.role_id = ?");
@@ -462,7 +244,7 @@ const countMembers = async (
   }
 
   /**
-   * Add WHERE only when there are conditions.
+   * WHERE
    */
   if (conditions.length > 0) {
     query += `
@@ -470,7 +252,120 @@ const countMembers = async (
     `;
   }
 
-  const [rows] = await db.execute(query, queryParams);
+  /**
+   * Allowed sorting fields
+   *
+   * Whitelist prevents SQL injection.
+   */
+  const allowedSortFields = {
+    first_name: "u.first_name",
+    last_name: "u.last_name",
+    member_number: "m.member_number",
+    email: "u.email",
+    created_at: "m.created_at",
+  };
+
+  const sortColumn =
+    allowedSortFields[sortBy] ||
+    allowedSortFields.created_at;
+
+  const sortDirection =
+    sortOrder.toLowerCase() === "desc"
+      ? "DESC"
+      : "ASC";
+
+  /**
+   * Sorting + pagination
+   */
+  query += `
+    ORDER BY ${sortColumn} ${sortDirection}
+    LIMIT ? OFFSET ?
+  `;
+
+  queryParams.push(limit, offset);
+
+  const [rows] = await db.execute(
+    query,
+    queryParams
+  );
+
+  return rows;
+};
+
+/**
+ * Count members
+ */
+const countMembers = async (
+  search = "",
+  status = "",
+  roleId = ""
+) => {
+  let query = `
+    SELECT COUNT(*) AS total
+
+    FROM members m
+
+    INNER JOIN users u
+      ON m.user_id = u.id
+  `;
+
+  const conditions = [];
+  const queryParams = [];
+
+  /**
+   * Search
+   */
+  if (search) {
+    conditions.push(`
+      (
+        u.first_name LIKE ?
+        OR u.last_name LIKE ?
+        OR u.email LIKE ?
+        OR m.member_number LIKE ?
+        OR m.phone LIKE ?
+      )
+    `);
+
+    const searchTerm = `%${search}%`;
+
+    queryParams.push(
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm
+    );
+  }
+
+  /**
+   * Status
+   */
+  if (status) {
+    conditions.push("m.status = ?");
+    queryParams.push(status);
+  }
+
+  /**
+   * Role
+   */
+  if (roleId) {
+    conditions.push("u.role_id = ?");
+    queryParams.push(roleId);
+  }
+
+  /**
+   * WHERE
+   */
+  if (conditions.length > 0) {
+    query += `
+      WHERE ${conditions.join(" AND ")}
+    `;
+  }
+
+  const [rows] = await db.execute(
+    query,
+    queryParams
+  );
 
   return Number(rows[0].total);
 };

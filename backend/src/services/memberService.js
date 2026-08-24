@@ -4,18 +4,27 @@ const memberModel = require("../models/memberModel");
  * Create member
  */
 const createMember = async (memberData) => {
-  return await memberModel.createMember(memberData);
+  return await memberModel.createMember(
+    memberData
+  );
 };
 
 /**
  * Get member by ID
  */
 const getMemberById = async (memberId) => {
-  const member = await memberModel.getMemberById(memberId);
+  const member =
+    await memberModel.getMemberById(
+      memberId
+    );
 
   if (!member) {
-    const error = new Error("Member not found");
+    const error = new Error(
+      "Member not found"
+    );
+
     error.statusCode = 404;
+
     throw error;
   }
 
@@ -25,21 +34,33 @@ const getMemberById = async (memberId) => {
 /**
  * Update member
  */
-const updateMember = async (memberId, memberData) => {
-  const existingMember = await memberModel.getMemberById(memberId);
+const updateMember = async (
+  memberId,
+  memberData
+) => {
+  const existingMember =
+    await memberModel.getMemberById(
+      memberId
+    );
 
   if (!existingMember) {
-    const error = new Error("Member not found");
+    const error = new Error(
+      "Member not found"
+    );
+
     error.statusCode = 404;
+
     throw error;
   }
 
   const updatedData = {
     memberNumber:
-      memberData.memberNumber ?? existingMember.member_number,
+      memberData.memberNumber ??
+      existingMember.member_number,
 
     gender:
-      memberData.gender ?? existingMember.gender,
+      memberData.gender ??
+      existingMember.gender,
 
     phone:
       memberData.phone !== undefined
@@ -62,7 +83,8 @@ const updateMember = async (memberId, memberData) => {
         : existingMember.address,
 
     status:
-      memberData.status ?? existingMember.status,
+      memberData.status ??
+      existingMember.status,
   };
 
   return await memberModel.updateMember(
@@ -75,62 +97,34 @@ const updateMember = async (memberId, memberData) => {
  * Delete member
  */
 const deleteMember = async (memberId) => {
-  const existingMember = await memberModel.getMemberById(memberId);
+  const existingMember =
+    await memberModel.getMemberById(
+      memberId
+    );
 
   if (!existingMember) {
-    const error = new Error("Member not found");
+    const error = new Error(
+      "Member not found"
+    );
+
     error.statusCode = 404;
+
     throw error;
   }
 
-  return await memberModel.deleteMember(memberId);
+  return await memberModel.deleteMember(
+    memberId
+  );
 };
 
-// /**
-//  * Get all members with pagination,
-//  * search, status filter, and role filter
-//  */
-// const getAllMembers = async (
-//   page = 1,
-//   limit = 10,
-//   search = "",
-//   status = "",
-//   roleId = ""
-// ) => {
-//   const offset = (page - 1) * limit;
-
-//   const [members, total] = await Promise.all([
-//     memberModel.getAllMembers(
-//       limit,
-//       offset,
-//       search,
-//       status,
-//       roleId
-//     ),
-
-//     memberModel.countMembers(
-//       search,
-//       status,
-//       roleId
-//     ),
-//   ]);
-
-//   const totalPages = Math.ceil(total / limit);
-
-//   return {
-//     members,
-//     pagination: {
-//       page,
-//       limit,
-//       total,
-//       totalPages,
-//     },
-//   };
-// };
-
 /**
- * Get all members with pagination,
- * search, status filter, role filter, and sorting
+ * Get all members with:
+ *
+ * - Pagination
+ * - Search
+ * - Status filter
+ * - Role filter
+ * - Sorting
  */
 const getAllMembers = async (
   page = 1,
@@ -141,9 +135,13 @@ const getAllMembers = async (
   sortBy = "created_at",
   sortOrder = "asc"
 ) => {
-  const offset = (page - 1) * limit;
+  const offset =
+    (page - 1) * limit;
 
-  const [members, total] = await Promise.all([
+  const [
+    members,
+    total,
+  ] = await Promise.all([
     memberModel.getAllMembers(
       limit,
       offset,
@@ -161,10 +159,12 @@ const getAllMembers = async (
     ),
   ]);
 
-  const totalPages = Math.ceil(total / limit);
+  const totalPages =
+    Math.ceil(total / limit);
 
   return {
     members,
+
     pagination: {
       page,
       limit,

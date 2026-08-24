@@ -30,9 +30,7 @@ export default function MemberFilters({
           <input
             type="text"
             value={filters.search}
-            onChange={(event) =>
-              onSearch(event.target.value)
-            }
+            onChange={(event) => onSearch(event.target.value)}
             placeholder="Search members by name, email, phone..."
             className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
           />
@@ -40,6 +38,7 @@ export default function MemberFilters({
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Status */}
           <div className="flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
             <SlidersHorizontal
               size={15}
@@ -59,6 +58,7 @@ export default function MemberFilters({
             </select>
           </div>
 
+          {/* Role */}
           <select
             value={filters.roleId}
             onChange={(event) =>
@@ -67,12 +67,19 @@ export default function MemberFilters({
             className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
           >
             <option value="">All roles</option>
+
             <option value="1">Admin</option>
+
             <option value="2">Pastor</option>
-            <option value="3">Ministry Leader</option>
-            <option value="4">Member</option>
+
+            <option value="3">Church Elder</option>
+
+            <option value="4">Ministry Leader</option>
+
+            <option value="5">Member</option>
           </select>
 
+          {/* Sorting */}
           <button
             type="button"
             onClick={() => onSort("created_at")}
@@ -85,10 +92,13 @@ export default function MemberFilters({
             )}
 
             <span className="hidden sm:inline">
-              Newest
+              {filters.sortOrder === "asc"
+                ? "Oldest"
+                : "Newest"}
             </span>
           </button>
 
+          {/* Clear */}
           {hasFilters && (
             <button
               type="button"
