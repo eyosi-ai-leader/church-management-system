@@ -17,6 +17,23 @@ function getInitials(firstName, lastName) {
 }
 
 function getRoleName(member) {
+  // Keep role IDs consistent with the database.
+  switch (Number(member.role_id)) {
+    case 1:
+      return "Admin";
+    case 2:
+      return "Pastor";
+    case 3:
+      return "Church Elder";
+    case 4:
+      return "Ministry Leader";
+    case 5:
+      return "Member";
+    default:
+      break;
+  }
+
+  // Fallback for API responses that may use a different field name.
   if (member.role_name) {
     return member.role_name;
   }
@@ -25,18 +42,7 @@ function getRoleName(member) {
     return member.roleName;
   }
 
-  switch (Number(member.role_id)) {
-    case 1:
-      return "Admin";
-    case 2:
-      return "Pastor";
-    case 3:
-      return "Ministry Leader";
-    case 4:
-      return "Member";
-    default:
-      return "Member";
-  }
+  return "Member";
 }
 
 function SortButton({
