@@ -259,7 +259,6 @@ export default function MembersTable({
                     key={member.id}
                     className="group transition hover:bg-slate-50/80"
                   >
-                    {/* Member */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white shadow-sm">
@@ -285,7 +284,6 @@ export default function MembersTable({
                       </div>
                     </td>
 
-                    {/* Member Number */}
                     <td className="px-5 py-4">
                       <span className="font-mono text-xs font-medium text-slate-500">
                         {member.member_number ||
@@ -294,21 +292,18 @@ export default function MembersTable({
                       </span>
                     </td>
 
-                    {/* Email */}
                     <td className="px-5 py-4">
                       <span className="text-sm text-slate-500">
                         {member.email || "—"}
                       </span>
                     </td>
 
-                    {/* Role */}
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                         {role}
                       </span>
                     </td>
 
-                    {/* Status */}
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -329,7 +324,6 @@ export default function MembersTable({
                       </span>
                     </td>
 
-                    {/* Created */}
                     <td className="px-5 py-4">
                       <span className="text-xs font-medium text-slate-500">
                         {member.created_at
@@ -347,7 +341,6 @@ export default function MembersTable({
                       </span>
                     </td>
 
-                    {/* Actions */}
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1">
                         <Link
@@ -369,9 +362,7 @@ export default function MembersTable({
                         <button
                           type="button"
                           title="Delete member"
-                          onClick={() =>
-                            onDelete(member)
-                          }
+                          onClick={() => onDelete(member)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
                         >
                           <Trash2 size={15} />
@@ -380,12 +371,8 @@ export default function MembersTable({
                         <MemberActionsMenu
                           member={member}
                           onDelete={onDelete}
-                          onChangeStatus={
-                            onChangeStatus
-                          }
-                          onChangeRole={
-                            onChangeRole
-                          }
+                          onChangeStatus={onChangeStatus}
+                          onChangeRole={onChangeRole}
                         />
                       </div>
                     </td>

@@ -43,13 +43,13 @@ export default function MemberActionsMenu({
     };
   }, []);
 
-  const handleAction = (callback) => {
+  function handleAction(callback) {
     setOpen(false);
 
     if (callback) {
       callback(member);
     }
-  };
+  }
 
   return (
     <div
@@ -67,8 +67,6 @@ export default function MemberActionsMenu({
 
       {open && (
         <div className="absolute right-0 top-10 z-50 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-          
-          {/* View */}
           <Link
             href={`/dashboard/members/${member.id}`}
             onClick={() => setOpen(false)}
@@ -78,7 +76,6 @@ export default function MemberActionsMenu({
             View Member
           </Link>
 
-          {/* Edit */}
           <Link
             href={`/dashboard/members/${member.id}/edit`}
             onClick={() => setOpen(false)}
@@ -90,7 +87,6 @@ export default function MemberActionsMenu({
 
           <div className="my-1 border-t border-slate-100" />
 
-          {/* Change Status */}
           <button
             type="button"
             onClick={() =>
@@ -102,7 +98,6 @@ export default function MemberActionsMenu({
             Change Status
           </button>
 
-          {/* Change Role */}
           <button
             type="button"
             onClick={() =>
@@ -116,7 +111,6 @@ export default function MemberActionsMenu({
 
           <div className="my-1 border-t border-slate-100" />
 
-          {/* Delete */}
           <button
             type="button"
             onClick={() =>

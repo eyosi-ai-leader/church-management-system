@@ -9,12 +9,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { getMembers, deleteMember } from "@/lib/memberApi";
+import {
+  getMembers,
+  deleteMember,
+  updateMember,
+} from "@/lib/memberApi";
 
 import MembersTable from "./MembersTable";
 import MemberFilters from "./MemberFilters";
 import MemberPagination from "./MemberPagination";
 import MemberDeleteDialog from "./MemberDeleteDialog";
+import ChangeStatusModal from "./ChangeStatusModal";
+import ChangeRoleModal from "./ChangeRoleModal";
 
 export default function MembersPage() {
   const [members, setMembers] = useState([]);
@@ -40,6 +46,12 @@ export default function MembersPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [statusTarget, setStatusTarget] = useState(null);
+  const [changingStatus, setChangingStatus] = useState(false);
+
+  const [roleTarget, setRoleTarget] = useState(null);
+  const [changingRole, setChangingRole] = useState(false);
 
   const loadMembers = useCallback(
     async (showRefresh = false) => {
@@ -69,10 +81,14 @@ export default function MembersPage() {
           ...(response?.pagination || {}),
         }));
       } catch (error) {
-        console.error("Members loading error:", error);
+        console.error(
+          "Members loading error:",
+          error
+        );
 
         setError(
-          error.message || "Failed to load members."
+          error.message ||
+            "Failed to load members."
         );
       } finally {
         setLoading(false);
@@ -171,6 +187,7 @@ export default function MembersPage() {
 
     try {
       setDeleting(true);
+      setError("");
 
       await deleteMember(deleteTarget.id);
 
@@ -178,13 +195,95 @@ export default function MembersPage() {
 
       await loadMembers(true);
     } catch (error) {
-      console.error("Delete member error:", error);
+      console.error(
+        "Delete member error:",
+        error
+      );
 
       setError(
-        error.message || "Failed to delete member."
+        error.message ||
+          "Failed to delete member."
       );
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function handleChangeStatus(member) {
+    setStatusTarget(member);
+    setError("");
+  }
+
+  async function handleStatusConfirm(status) {
+    if (!statusTarget) {
+      return;
+    }
+
+    try {
+      setChangingStatus(true);
+      setError("");
+
+      await updateMember(
+        statusTarget.id,
+        {
+          status,
+        }
+      );
+
+      setStatusTarget(null);
+
+      await loadMembers(true);
+    } catch (error) {
+      console.error(
+        "Change member status error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Failed to change member status."
+      );
+    } finally {
+      setChangingStatus(false);
+    }
+  }
+
+  function handleChangeRole(member) {
+    setRoleTarget(member);
+    setError("");
+  }
+
+  async function handleRoleConfirm(roleId) {
+    if (!roleTarget) {
+      return;
+    }
+
+    try {
+      setChangingRole(true);
+      setError("");
+
+      await updateMember(
+        roleTarget.id,
+        {
+          roleId: Number(roleId),
+        }
+      );
+
+      setRoleTarget(null);
+
+      await loadMembers(true);
+    } catch (error) {
+      console.error(
+        "Change member role error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Failed to change member role."
+      );
+    } finally {
+      setChangingRole(false);
     }
   }
 
@@ -196,11 +295,15 @@ export default function MembersPage() {
   return (
     <div className="min-h-full space-y-6">
       {/* Header */}
+
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-              <Users size={19} strokeWidth={2} />
+              <Users
+                size={19}
+                strokeWidth={2}
+              />
             </div>
 
             <div>
@@ -230,7 +333,9 @@ export default function MembersPage() {
             <RefreshCw
               size={16}
               className={
-                refreshing ? "animate-spin" : ""
+                refreshing
+                  ? "animate-spin"
+                  : ""
               }
             />
 
@@ -251,6 +356,7 @@ export default function MembersPage() {
       </div>
 
       {/* Summary */}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -312,6 +418,7 @@ export default function MembersPage() {
       </div>
 
       {/* Filters */}
+
       <MemberFilters
         filters={filters}
         onSearch={handleSearch}
@@ -323,12 +430,13 @@ export default function MembersPage() {
       />
 
       {/* Error */}
+
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-red-700">
-                Failed to load members
+                Member action failed
               </p>
 
               <p className="mt-1 text-xs text-red-600">
@@ -348,6 +456,7 @@ export default function MembersPage() {
       )}
 
       {/* Table */}
+
       <MembersTable
         members={members}
         loading={loading}
@@ -355,22 +464,52 @@ export default function MembersPage() {
         sortOrder={filters.sortOrder}
         onSort={handleSortChange}
         onDelete={setDeleteTarget}
+        onChangeStatus={handleChangeStatus}
+        onChangeRole={handleChangeRole}
       />
 
       {/* Pagination */}
-      {!loading && !error && pagination.total > 0 && (
-        <MemberPagination
-          pagination={pagination}
-          onPageChange={handlePageChange}
-        />
-      )}
+
+      {!loading &&
+        !error &&
+        pagination.total > 0 && (
+          <MemberPagination
+            pagination={pagination}
+            onPageChange={handlePageChange}
+          />
+        )}
 
       {/* Delete dialog */}
+
       <MemberDeleteDialog
         member={deleteTarget}
         deleting={deleting}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() =>
+          setDeleteTarget(null)
+        }
         onConfirm={handleDelete}
+      />
+
+      {/* Change Status Modal */}
+
+      <ChangeStatusModal
+        member={statusTarget}
+        changing={changingStatus}
+        onCancel={() =>
+          setStatusTarget(null)
+        }
+        onConfirm={handleStatusConfirm}
+      />
+
+      {/* Change Role Modal */}
+
+      <ChangeRoleModal
+        member={roleTarget}
+        changing={changingRole}
+        onCancel={() =>
+          setRoleTarget(null)
+        }
+        onConfirm={handleRoleConfirm}
       />
     </div>
   );
