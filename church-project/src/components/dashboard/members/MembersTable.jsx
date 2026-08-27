@@ -6,18 +6,18 @@ import {
   ArrowUp,
   ArrowUpDown,
   Eye,
-  MoreHorizontal,
   Pencil,
   Trash2,
   UserRound,
 } from "lucide-react";
+
+import MemberActionsMenu from "./MemberActionsMenu";
 
 function getInitials(firstName, lastName) {
   return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
 }
 
 function getRoleName(member) {
-  // Keep role IDs consistent with the database.
   switch (Number(member.role_id)) {
     case 1:
       return "Admin";
@@ -33,7 +33,6 @@ function getRoleName(member) {
       break;
   }
 
-  // Fallback for API responses that may use a different field name.
   if (member.role_name) {
     return member.role_name;
   }
@@ -70,7 +69,10 @@ function SortButton({
       )}
 
       {active && sortOrder === "asc" && (
-        <ArrowUp size={12} className="text-slate-700" />
+        <ArrowUp
+          size={12}
+          className="text-slate-700"
+        />
       )}
 
       {active && sortOrder === "desc" && (
@@ -120,7 +122,7 @@ function LoadingRows() {
           </td>
 
           <td className="px-5 py-4">
-            <div className="h-8 w-8 animate-pulse rounded-lg bg-slate-100" />
+            <div className="ml-auto h-8 w-8 animate-pulse rounded-lg bg-slate-100" />
           </td>
         </tr>
       ))}
@@ -135,6 +137,8 @@ export default function MembersTable({
   sortOrder,
   onSort,
   onDelete,
+  onChangeStatus,
+  onChangeRole,
 }) {
   if (!loading && members.length === 0) {
     return (
@@ -373,13 +377,16 @@ export default function MembersTable({
                           <Trash2 size={15} />
                         </button>
 
-                        <button
-                          type="button"
-                          title="More actions"
-                          className="hidden h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-100 hover:text-slate-700 sm:flex"
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
+                        <MemberActionsMenu
+                          member={member}
+                          onDelete={onDelete}
+                          onChangeStatus={
+                            onChangeStatus
+                          }
+                          onChangeRole={
+                            onChangeRole
+                          }
+                        />
                       </div>
                     </td>
                   </tr>
