@@ -63,16 +63,213 @@ const getMemberById = async (req, res) => {
 
 /**
  * Update member
+ *
+ * Updates:
+ * - Personal information
+ * - Church information
+ * - Account role
  */
 const updateMember = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      roleId,
+      memberNumber,
+      gender,
+      dateOfBirth,
+      baptismDate,
+      address,
+      status,
+    } = req.body;
+
+    /**
+     * Validate role ID when provided
+     *
+     * 1 = Admin
+     * 2 = Pastor
+     * 3 = Church Elder
+     * 4 = Ministry Leader
+     * 5 = Member
+     */
+    if (
+      roleId !== undefined &&
+      (
+        !Number.isInteger(Number(roleId)) ||
+        Number(roleId) < 1 ||
+        Number(roleId) > 5
+      )
+    ) {
+      return errorResponse(
+        res,
+        "Role ID must be between 1 and 5",
+        400
+      );
+    }
+
+    /**
+     * Validate gender when provided
+     */
+    if (
+      gender !== undefined &&
+      gender !== null &&
+      gender !== "" &&
+      gender !== "Male" &&
+      gender !== "Female"
+    ) {
+      return errorResponse(
+        res,
+        "Gender must be either Male or Female",
+        400
+      );
+    }
+
+    /**
+     * Validate status when provided
+     */
+    if (
+      status !== undefined &&
+      status !== null &&
+      status !== "" &&
+      status !== "Active" &&
+      status !== "Inactive"
+    ) {
+      return errorResponse(
+        res,
+        "Status must be either Active or Inactive",
+        400
+      );
+    }
+
+    /**
+     * Validate required string fields when provided
+     */
+    if (
+      firstName !== undefined &&
+      (
+        typeof firstName !== "string" ||
+        !firstName.trim()
+      )
+    ) {
+      return errorResponse(
+        res,
+        "First name cannot be empty",
+        400
+      );
+    }
+
+    if (
+      lastName !== undefined &&
+      (
+        typeof lastName !== "string" ||
+        !lastName.trim()
+      )
+    ) {
+      return errorResponse(
+        res,
+        "Last name cannot be empty",
+        400
+      );
+    }
+
+    if (
+      email !== undefined &&
+      (
+        typeof email !== "string" ||
+        !email.trim()
+      )
+    ) {
+      return errorResponse(
+        res,
+        "Email cannot be empty",
+        400
+      );
+    }
+
+    if (
+      memberNumber !== undefined &&
+      (
+        typeof memberNumber !== "string" ||
+        !memberNumber.trim()
+      )
+    ) {
+      return errorResponse(
+        res,
+        "Member number cannot be empty",
+        400
+      );
+    }
+
+    /**
+     * Validate email format when provided
+     */
+    if (
+      email !== undefined &&
+      email.trim()
+    ) {
+      const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailPattern.test(email.trim())) {
+        return errorResponse(
+          res,
+          "Please provide a valid email address",
+          400
+        );
+      }
+    }
+
+    /**
+     * Update member
+     */
     await memberService.updateMember(
       id,
-      req.body
+      {
+        firstName:
+          firstName !== undefined
+            ? firstName.trim()
+            : undefined,
+
+        lastName:
+          lastName !== undefined
+            ? lastName.trim()
+            : undefined,
+
+        email:
+          email !== undefined
+            ? email.trim()
+            : undefined,
+
+        phone:
+          phone !== undefined
+            ? phone
+            : undefined,
+
+        roleId:
+          roleId !== undefined
+            ? Number(roleId)
+            : undefined,
+
+        memberNumber:
+          memberNumber !== undefined
+            ? memberNumber.trim()
+            : undefined,
+
+        gender,
+        dateOfBirth,
+        baptismDate,
+        address,
+        status,
+      }
     );
 
+    /**
+     * Return the complete updated member
+     */
     const updatedMember =
       await memberService.getMemberById(id);
 
@@ -83,7 +280,10 @@ const updateMember = async (req, res) => {
       200
     );
   } catch (error) {
-    console.error("Update member error:", error);
+    console.error(
+      "Update member error:",
+      error
+    );
 
     return errorResponse(
       res,

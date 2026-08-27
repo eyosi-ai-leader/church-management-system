@@ -51,10 +51,8 @@ const getMemberById = async (memberId) => {
       u.first_name,
       u.last_name,
       u.email,
-
       u.role_id,
       r.name AS role_name,
-
       u.phone AS user_phone,
 
       m.gender,
@@ -63,6 +61,7 @@ const getMemberById = async (memberId) => {
       m.baptism_date,
       m.address,
       m.status,
+
       m.created_at,
       m.updated_at
 
@@ -79,51 +78,124 @@ const getMemberById = async (memberId) => {
     LIMIT 1
   `;
 
-  const [rows] = await db.execute(query, [memberId]);
+  const [rows] = await db.execute(query, [
+    memberId,
+  ]);
 
   return rows[0] || null;
 };
 
 /**
  * Update member
+ *
+ * Updates:
+ *
+ * users:
+ * - first_name
+ * - last_name
+ * - email
+ * - role_id
+ * - phone
+ *
+ * members:
+ * - member_number
+ * - gender
+ * - phone
+ * - date_of_birth
+ * - baptism_date
+ * - address
+ * - status
+ *
+ * Both tables are updated inside one transaction.
  */
 const updateMember = async (
   memberId,
+  userId,
   {
+    firstName,
+    lastName,
+    email,
+    roleId,
+    phone,
     memberNumber,
     gender,
-    phone,
     dateOfBirth,
     baptismDate,
     address,
     status,
   }
 ) => {
-  const query = `
-    UPDATE members
-    SET
-      member_number = ?,
-      gender = ?,
-      phone = ?,
-      date_of_birth = ?,
-      baptism_date = ?,
-      address = ?,
-      status = ?
-    WHERE id = ?
-  `;
+  const connection =
+    await db.getConnection();
 
-  const [result] = await db.execute(query, [
-    memberNumber,
-    gender,
-    phone || null,
-    dateOfBirth || null,
-    baptismDate || null,
-    address || null,
-    status,
-    memberId,
-  ]);
+  try {
+    await connection.beginTransaction();
 
-  return result;
+    /**
+     * Update user/account information
+     */
+    const userQuery = `
+      UPDATE users
+      SET
+        first_name = ?,
+        last_name = ?,
+        email = ?,
+        role_id = ?,
+        phone = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+
+    await connection.execute(userQuery, [
+      firstName,
+      lastName,
+      email,
+      roleId,
+      phone || null,
+      userId,
+    ]);
+
+    /**
+     * Update member/church information
+     */
+    const memberQuery = `
+      UPDATE members
+      SET
+        member_number = ?,
+        gender = ?,
+        phone = ?,
+        date_of_birth = ?,
+        baptism_date = ?,
+        address = ?,
+        status = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+
+    const [result] =
+      await connection.execute(
+        memberQuery,
+        [
+          memberNumber,
+          gender,
+          phone || null,
+          dateOfBirth || null,
+          baptismDate || null,
+          address || null,
+          status,
+          memberId,
+        ]
+      );
+
+    await connection.commit();
+
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 };
 
 /**
@@ -135,7 +207,10 @@ const deleteMember = async (memberId) => {
     WHERE id = ?
   `;
 
-  const [result] = await db.execute(query, [memberId]);
+  const [result] = await db.execute(
+    query,
+    [memberId]
+  );
 
   return result;
 };
@@ -187,6 +262,7 @@ const getAllMembers = async (
       m.baptism_date,
       m.address,
       m.status,
+
       m.created_at,
       m.updated_at
 

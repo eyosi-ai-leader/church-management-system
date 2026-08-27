@@ -33,6 +33,24 @@ const getMemberById = async (memberId) => {
 
 /**
  * Update member
+ *
+ * Updates both:
+ *
+ * users:
+ * - first_name
+ * - last_name
+ * - email
+ * - phone
+ * - role_id
+ *
+ * members:
+ * - member_number
+ * - gender
+ * - phone
+ * - date_of_birth
+ * - baptism_date
+ * - address
+ * - status
  */
 const updateMember = async (
   memberId,
@@ -54,18 +72,43 @@ const updateMember = async (
   }
 
   const updatedData = {
-    memberNumber:
-      memberData.memberNumber ??
-      existingMember.member_number,
+    firstName:
+      memberData.firstName !== undefined
+        ? memberData.firstName
+        : existingMember.first_name,
 
-    gender:
-      memberData.gender ??
-      existingMember.gender,
+    lastName:
+      memberData.lastName !== undefined
+        ? memberData.lastName
+        : existingMember.last_name,
+
+    email:
+      memberData.email !== undefined
+        ? memberData.email
+        : existingMember.email,
+
+    roleId:
+      memberData.roleId !== undefined
+        ? memberData.roleId
+        : existingMember.role_id,
 
     phone:
       memberData.phone !== undefined
         ? memberData.phone
-        : existingMember.phone,
+        : (
+            existingMember.user_phone ??
+            existingMember.phone
+          ),
+
+    memberNumber:
+      memberData.memberNumber !== undefined
+        ? memberData.memberNumber
+        : existingMember.member_number,
+
+    gender:
+      memberData.gender !== undefined
+        ? memberData.gender
+        : existingMember.gender,
 
     dateOfBirth:
       memberData.dateOfBirth !== undefined
@@ -83,12 +126,14 @@ const updateMember = async (
         : existingMember.address,
 
     status:
-      memberData.status ??
-      existingMember.status,
+      memberData.status !== undefined
+        ? memberData.status
+        : existingMember.status,
   };
 
   return await memberModel.updateMember(
     memberId,
+    existingMember.user_id,
     updatedData
   );
 };

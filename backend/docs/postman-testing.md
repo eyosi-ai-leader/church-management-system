@@ -130,12 +130,12 @@ ORDER BY m.id;
   "email": "abebe.member@example.com",
   "password": "Member@12345"
 }
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwicm9sZUlkIjo1LCJlbWFpbCI6ImFiZWJlLm1lbWJlckBleGFtcGxlLmNvbSIsImlhdCI6MTc4Njk3MTkyNCwiZXhwIjoxNzg3MDU4MzI0fQ.iw8mLiW0OrcOFz1PeYciesf6SjK-aDTG-Uain2TSMys
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwicm9sZUlkIjo1LCJlbWFpbCI6ImFiZWJlLm1lbWJlckBleGFtcGxlLmNvbSIsImlhdCI6MTc4NzgzNjgzNSwiZXhwIjoxNzg3OTIzMjM1fQ.GzVoZiSqK1Ek2A83YjwgzgdF3XGykiSVwrp4wLFcQKk
 {
   "email": "admin1@church.test",
   "password": "Admin@12345"
 }
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGVJZCI6MSwiZW1haWwiOiJhZG1pbjFAY2h1cmNoLnRlc3QiLCJpYXQiOjE3ODczMDU2ODYsImV4cCI6MTc4NzM5MjA4Nn0.7B6FSj7HtuzGZf84Ka6BalwyZz6TJEXc2rENwEVD4UU
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGVJZCI6MSwiZW1haWwiOiJhZG1pbjFAY2h1cmNoLnRlc3QiLCJpYXQiOjE3ODc4NTA3MzYsImV4cCI6MTc4NzkzNzEzNn0.djOcLnZ-YhMccEFwTfGHYq5szzgSN-ULQn5yqpGlEUY
 {
   "email": "pastor1@church.test",
   "password": "Pastor@12345"
@@ -278,7 +278,112 @@ Expected:
 
 
 
+Member Update API — Postman Testing
+1. Get Member by ID
 
+Method: GET
+
+URL:
+
+http://localhost:5000/api/members/1
+Authorization
+
+Go to Authorization → select Bearer Token → enter:
+
+YOUR_TOKEN
+
+Click Send.
+
+Expected result
+
+You should receive the member's current information:
+
+{
+  "success": true,
+  "message": "Member retrieved successfully",
+  "data": {
+    "id": 1,
+    "user_id": 4,
+    "member_number": "MEM-0001",
+    "first_name": "...",
+    "last_name": "...",
+    "email": "...",
+    "role_id": 3,
+    "role_name": "Church Elder",
+    "phone": "...",
+    "gender": "...",
+    "date_of_birth": "...",
+    "baptism_date": "...",
+    "address": "...",
+    "status": "Active"
+  }
+}
+2. Update Member
+
+Method: PUT
+
+URL:
+
+http://localhost:5000/api/members/1
+Authorization
+
+Authorization → Bearer Token
+
+YOUR_TOKEN
+Headers
+Content-Type: application/json
+Body
+
+Select:
+
+Body → raw → JSON
+
+Then use:
+
+{
+  "firstName": "Updated",
+  "lastName": "Member",
+  "email": "updated.member@example.com",
+  "phone": "0912345678",
+  "roleId": 3,
+  "memberNumber": "MEM-0001",
+  "gender": "Male",
+  "dateOfBirth": "1998-05-15",
+  "baptismDate": "2015-08-20",
+  "address": "Addis Ababa, Ethiopia",
+  "status": "Active"
+}
+
+Click Send.
+
+Expected result
+{
+  "success": true,
+  "message": "Member updated successfully",
+  "data": {
+    "id": 1,
+    "user_id": 4,
+    "member_number": "MEM-0001",
+    "first_name": "Updated",
+    "last_name": "Member",
+    "email": "updated.member@example.com",
+    "role_id": 3,
+    "role_name": "Church Elder",
+    "phone": "0912345678",
+    "gender": "Male",
+    "date_of_birth": "1998-05-15",
+    "baptism_date": "2015-08-20",
+    "address": "Addis Ababa, Ethiopia",
+    "status": "Active"
+  }
+}
+3. Important Test
+
+After the PUT succeeds, run the GET request again:
+
+GET http://localhost:5000/api/members/1
+
+Confirm that the updated information is returned.
 
 
 
