@@ -10,13 +10,13 @@ export default function SocialLogin() {
         Google
       </button>
 
-      <button
+      {/* <button
         type="button"
         className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       >
         <span className="font-bold text-slate-900">GH</span>
         GitHub
-      </button>
+      </button> */}
 
     </div>
   );
