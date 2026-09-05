@@ -250,39 +250,36 @@ async function handleStatusConfirm(member, status) {
     setError("");
   }
 
-  async function handleRoleConfirm(roleId) {
-    if (!roleTarget) {
-      return;
-    }
-
-    try {
-      setChangingRole(true);
-      setError("");
-
-      await updateMember(
-        roleTarget.id,
-        {
-          roleId: Number(roleId),
-        }
-      );
-
-      setRoleTarget(null);
-
-      await loadMembers(true);
-    } catch (error) {
-      console.error(
-        "Change member role error:",
-        error
-      );
-
-      setError(
-        error.message ||
-          "Failed to change member role."
-      );
-    } finally {
-      setChangingRole(false);
-    }
+ async function handleRoleConfirm(member, roleId) {
+  if (!member) {
+    return;
   }
+
+  try {
+    setChangingRole(true);
+    setError("");
+
+    await updateMember(member.id, {
+      roleId: Number(roleId),
+    });
+
+    setRoleTarget(null);
+
+    await loadMembers(true);
+  } catch (error) {
+    console.error(
+      "Change member role error:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "Failed to change member role."
+    );
+  } finally {
+    setChangingRole(false);
+  }
+}
 
   const hasFilters =
     Boolean(filters.search) ||
@@ -500,13 +497,12 @@ async function handleStatusConfirm(member, status) {
       {/* Change Role Modal */}
 
       <ChangeRoleModal
-        member={roleTarget}
-        changing={changingRole}
-        onCancel={() =>
-          setRoleTarget(null)
-        }
-        onConfirm={handleRoleConfirm}
-      />
+  member={roleTarget}
+  open={Boolean(roleTarget)}
+  saving={changingRole}
+  onClose={() => setRoleTarget(null)}
+  onConfirm={handleRoleConfirm}
+/>
     </div>
   );
 }
