@@ -221,6 +221,67 @@ const getMemberById = async (
 };
 
 /**
+ * Get member by authenticated user ID
+ *
+ * Used by the Member dashboard.
+ *
+ * This is important because a Member should
+ * only access their own member information.
+ */
+const getMemberByUserId = async (
+  userId
+) => {
+  const query = `
+    SELECT
+      m.id,
+      m.user_id,
+      m.member_number,
+
+      u.first_name,
+      u.middle_name,
+      u.last_name,
+      u.email,
+      u.role_id,
+
+      r.name AS role_name,
+
+      u.phone AS user_phone,
+      u.profile_image,
+
+      m.gender,
+      m.phone,
+      m.date_of_birth,
+      m.baptism_date,
+      m.address,
+      m.status,
+
+      m.created_at,
+      m.updated_at
+
+    FROM members m
+
+    INNER JOIN users u
+      ON m.user_id = u.id
+
+    LEFT JOIN roles r
+      ON u.role_id = r.id
+
+    WHERE m.user_id = ?
+
+    LIMIT 1
+  `;
+
+  const [rows] =
+    await db.execute(
+      query,
+      [userId]
+    );
+
+  return rows[0] || null;
+};
+
+
+/**
  * Update member
  *
  * Member number is NOT updated.
@@ -611,6 +672,7 @@ const countMembers = async ({
 module.exports = {
   createMember,
   getMemberById,
+  getMemberByUserId,
   updateMember,
   deleteMember,
   getAllMembers,

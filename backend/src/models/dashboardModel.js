@@ -352,12 +352,115 @@ async function getDashboardOverview(user) {
   }
 
   // ==========================================
-  // OTHER ROLES
-  // ==========================================
+// MEMBER DASHBOARD
+// roleId = 5
+// ==========================================
+if (user.roleId === 5) {
+
+  // ------------------------------------------
+  // Get the authenticated member
+  // ------------------------------------------
+  const [memberRows] = await db.query(
+    `
+      SELECT
+        m.id,
+        m.user_id,
+        m.member_number,
+
+        u.first_name,
+        u.middle_name,
+        u.last_name,
+        u.email,
+        u.role_id,
+
+        r.name AS role_name,
+
+        u.phone AS user_phone,
+        u.profile_image,
+
+        m.gender,
+        m.phone,
+        m.date_of_birth,
+        m.baptism_date,
+        m.address,
+        m.status,
+
+        m.created_at,
+        m.updated_at
+
+      FROM members m
+
+      INNER JOIN users u
+        ON m.user_id = u.id
+
+      LEFT JOIN roles r
+        ON u.role_id = r.id
+
+      WHERE m.user_id = ?
+
+      LIMIT 1
+    `,
+    [user.id]
+  );
+
+  const member = memberRows[0];
+
+  console.log("Member dashboard record:", member);
+
+  // ------------------------------------------
+  // Member record not found
+  // ------------------------------------------
+  if (!member) {
+    return {
+      role: "Member",
+      member: null,
+      message: "Member profile not found.",
+    };
+  }
+
   return {
-    roleId: user.roleId,
-    message: "Dashboard data for this role is coming soon.",
+    role: "Member",
+
+    member: {
+      id: member.id,
+      userId: member.user_id,
+
+      memberNumber: member.member_number,
+
+      firstName: member.first_name,
+      middleName: member.middle_name,
+      lastName: member.last_name,
+
+      email: member.email,
+
+      roleId: member.role_id,
+      roleName: member.role_name,
+
+      phone: member.phone || member.user_phone || null,
+
+      profileImage: member.profile_image,
+
+      gender: member.gender,
+      dateOfBirth: member.date_of_birth,
+      baptismDate: member.baptism_date,
+
+      address: member.address,
+
+      status: member.status,
+
+      memberSince: member.created_at,
+      updatedAt: member.updated_at,
+    },
   };
+}
+
+// ==========================================
+// OTHER ROLES
+// ==========================================
+return {
+  roleId: user.roleId,
+  message: "Dashboard data for this role is coming soon.",
+};
 }
 
 module.exports = {
