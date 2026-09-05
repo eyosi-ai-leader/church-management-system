@@ -214,39 +214,36 @@ export default function MembersPage() {
     setError("");
   }
 
-  async function handleStatusConfirm(status) {
-    if (!statusTarget) {
-      return;
-    }
-
-    try {
-      setChangingStatus(true);
-      setError("");
-
-      await updateMember(
-        statusTarget.id,
-        {
-          status,
-        }
-      );
-
-      setStatusTarget(null);
-
-      await loadMembers(true);
-    } catch (error) {
-      console.error(
-        "Change member status error:",
-        error
-      );
-
-      setError(
-        error.message ||
-          "Failed to change member status."
-      );
-    } finally {
-      setChangingStatus(false);
-    }
+async function handleStatusConfirm(member, status) {
+  if (!member) {
+    return;
   }
+
+  try {
+    setChangingStatus(true);
+    setError("");
+
+    await updateMember(member.id, {
+      status,
+    });
+
+    setStatusTarget(null);
+
+    await loadMembers(true);
+  } catch (error) {
+    console.error(
+      "Change member status error:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "Failed to change member status."
+    );
+  } finally {
+    setChangingStatus(false);
+  }
+}
 
   function handleChangeRole(member) {
     setRoleTarget(member);
@@ -492,14 +489,13 @@ export default function MembersPage() {
 
       {/* Change Status Modal */}
 
-      <ChangeStatusModal
-        member={statusTarget}
-        changing={changingStatus}
-        onCancel={() =>
-          setStatusTarget(null)
-        }
-        onConfirm={handleStatusConfirm}
-      />
+   <ChangeStatusModal
+  member={statusTarget}
+  open={Boolean(statusTarget)}
+  saving={changingStatus}
+  onClose={() => setStatusTarget(null)}
+  onConfirm={handleStatusConfirm}
+/>
 
       {/* Change Role Modal */}
 
