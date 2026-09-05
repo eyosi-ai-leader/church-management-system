@@ -12,6 +12,10 @@ const {
   updateMemberValidator,
 } = require("../validators/memberValidator");
 
+const {
+  uploadProfileImage,
+} = require("../middleware/uploadMiddleware");
+
 const { validationResult } = require("express-validator");
 
 /**
@@ -37,11 +41,19 @@ const validateRequest = (req, res, next) => {
  * Allowed roles:
  * 1 = Admin
  * 2 = Pastor
+ *
+ * Supports:
+ * - Member information
+ * - Optional profile image
+ *
+ * Profile image field name:
+ * profileImage
  */
 router.post(
   "/",
   authMiddleware,
   roleMiddleware(1, 2),
+  uploadProfileImage.single("profileImage"),
   createMemberValidator,
   validateRequest,
   memberController.createMember

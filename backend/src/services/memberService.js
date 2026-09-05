@@ -1,38 +1,57 @@
 const bcrypt = require("bcrypt");
+
 const memberModel = require("../models/memberModel");
+const {
+  uploadImage,
+  deleteImage,
+} = require("./storageService");
 
-/**
- * Create member
- *
- * Creates both:
- * - User account
- * - Member profile
- *
- * Password is hashed before it reaches the model.
- *
- * Member number is generated automatically
- * by the member model.
- */
-const createMember = async (memberData) => {
+const SALT_ROUNDS = 10;
+
+const createMember = async (memberData, profileImage = null) => {
+  let uploadedImage = null;
+
   try {
-    const hashedPassword =
-      await bcrypt.hash(
-        memberData.password,
-        10
-      );
-
-    const memberWithHashedPassword = {
-      ...memberData,
-      password: hashedPassword,
-    };
-
-    return await memberModel.createMember(
-      memberWithHashedPassword
+    const hashedPassword = await bcrypt.hash(
+      memberData.password,
+      SALT_ROUNDS
     );
+
+    if (profileImage) {
+      uploadedImage = await uploadImage(
+        profileImage.buffer,
+        {
+          folder: "chms/member-profiles",
+        }
+      );
+    }
+
+    const result =
+      await memberModel.createMember({
+        ...memberData,
+        profileImage:
+          uploadedImage?.secureUrl || null,
+      });
+
+    return result;
   } catch (error) {
-    if (
-      error.code === "ER_DUP_ENTRY"
-    ) {
+    // If Cloudinary upload succeeded but
+    // database creation failed, remove the
+    // uploaded image from Cloudinary.
+    if (uploadedImage?.publicId) {
+      try {
+        await deleteImage(
+          uploadedImage.publicId
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Failed to clean up uploaded profile image:",
+          cleanupError.message
+        );
+      }
+    }
+
+    if (error.code === "ER_DUP_ENTRY") {
       const duplicateError =
         new Error(
           "Email or member number already exists."
@@ -47,9 +66,6 @@ const createMember = async (memberData) => {
   }
 };
 
-/**
- * Get member by ID
- */
 const getMemberById = async (memberId) => {
   const member =
     await memberModel.getMemberById(
@@ -58,7 +74,7 @@ const getMemberById = async (memberId) => {
 
   if (!member) {
     const error = new Error(
-      "Member not found"
+      "Member not found."
     );
 
     error.statusCode = 404;
@@ -69,30 +85,6 @@ const getMemberById = async (memberId) => {
   return member;
 };
 
-/**
- * Update member
- *
- * Updates both:
- *
- * users:
- * - first_name
- * - middle_name
- * - last_name
- * - email
- * - phone
- * - role_id
- *
- * members:
- * - gender
- * - phone
- * - date_of_birth
- * - baptism_date
- * - address
- * - status
- *
- * Member number is NOT updated because it is
- * a permanent system-generated identity.
- */
 const updateMember = async (
   memberId,
   memberData
@@ -104,7 +96,7 @@ const updateMember = async (
 
   if (!existingMember) {
     const error = new Error(
-      "Member not found"
+      "Member not found."
     );
 
     error.statusCode = 404;
@@ -114,74 +106,72 @@ const updateMember = async (
 
   const updatedData = {
     firstName:
-      memberData.firstName !== undefined
-        ? memberData.firstName
-        : existingMember.first_name,
+      memberData.firstName ??
+      existingMember.first_name,
 
     middleName:
-      memberData.middleName !== undefined
-        ? memberData.middleName
-        : existingMember.middle_name,
+      memberData.middleName ??
+      existingMember.middle_name,
 
     lastName:
-      memberData.lastName !== undefined
-        ? memberData.lastName
-        : existingMember.last_name,
+      memberData.lastName ??
+      existingMember.last_name,
 
     email:
-      memberData.email !== undefined
-        ? memberData.email
-        : existingMember.email,
-
-    roleId:
-      memberData.roleId !== undefined
-        ? memberData.roleId
-        : existingMember.role_id,
+      memberData.email ??
+      existingMember.email,
 
     phone:
-      memberData.phone !== undefined
-        ? memberData.phone
-        : (
-            existingMember.user_phone ??
-            existingMember.phone
-          ),
+      memberData.phone ??
+      existingMember.phone,
+
+    roleId:
+      memberData.roleId ??
+      existingMember.role_id,
 
     gender:
-      memberData.gender !== undefined
-        ? memberData.gender
-        : existingMember.gender,
+      memberData.gender ??
+      existingMember.gender,
 
     dateOfBirth:
-      memberData.dateOfBirth !== undefined
-        ? memberData.dateOfBirth
-        : existingMember.date_of_birth,
+      memberData.dateOfBirth ??
+      existingMember.date_of_birth,
 
     baptismDate:
-      memberData.baptismDate !== undefined
-        ? memberData.baptismDate
-        : existingMember.baptism_date,
+      memberData.baptismDate ??
+      existingMember.baptism_date,
 
     address:
-      memberData.address !== undefined
-        ? memberData.address
-        : existingMember.address,
+      memberData.address ??
+      existingMember.address,
 
     status:
-      memberData.status !== undefined
-        ? memberData.status
-        : existingMember.status,
+      memberData.status ??
+      existingMember.status,
   };
 
-  return await memberModel.updateMember(
-    memberId,
-    existingMember.user_id,
-    updatedData
-  );
+  try {
+    return await memberModel.updateMember(
+      memberId,
+      existingMember.user_id,
+      updatedData
+    );
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      const duplicateError =
+        new Error(
+          "Email already exists."
+        );
+
+      duplicateError.statusCode = 409;
+
+      throw duplicateError;
+    }
+
+    throw error;
+  }
 };
 
-/**
- * Delete member
- */
 const deleteMember = async (memberId) => {
   const existingMember =
     await memberModel.getMemberById(
@@ -190,7 +180,7 @@ const deleteMember = async (memberId) => {
 
   if (!existingMember) {
     const error = new Error(
-      "Member not found"
+      "Member not found."
     );
 
     error.statusCode = 404;
@@ -198,29 +188,22 @@ const deleteMember = async (memberId) => {
     throw error;
   }
 
-  return await memberModel.deleteMember(
+  return memberModel.deleteMember(
     memberId
   );
 };
 
-/**
- * Get all members with:
- *
- * - Pagination
- * - Search
- * - Status filter
- * - Role filter
- * - Sorting
- */
-const getAllMembers = async (
-  page = 1,
-  limit = 10,
-  search = "",
-  status = "",
-  roleId = "",
-  sortBy = "created_at",
-  sortOrder = "asc"
-) => {
+const getAllMembers = async (options) => {
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    status = "",
+    roleId = "",
+    sortBy = "created_at",
+    sortOrder = "desc",
+  } = options;
+
   const offset =
     (page - 1) * limit;
 
@@ -228,34 +211,32 @@ const getAllMembers = async (
     members,
     total,
   ] = await Promise.all([
-    memberModel.getAllMembers(
+    memberModel.getAllMembers({
       limit,
       offset,
       search,
       status,
       roleId,
       sortBy,
-      sortOrder
-    ),
+      sortOrder,
+    }),
 
-    memberModel.countMembers(
+    memberModel.countMembers({
       search,
       status,
-      roleId
-    ),
+      roleId,
+    }),
   ]);
-
-  const totalPages =
-    Math.ceil(total / limit);
 
   return {
     members,
-
     pagination: {
       page,
       limit,
       total,
-      totalPages,
+      totalPages: Math.ceil(
+        total / limit
+      ),
     },
   };
 };

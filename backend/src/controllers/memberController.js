@@ -11,8 +11,9 @@ const {
  * Creates:
  * - User account
  * - Member record
+ * - Optional profile image
  *
- * Both are handled by the member service.
+ * Both user and member are handled by the member service.
  *
  * Member number is generated automatically
  * by the member model and cannot be provided
@@ -192,57 +193,64 @@ const createMember = async (req, res) => {
      *
      * Member number is generated automatically
      * inside the member model.
+     *
+     * Profile image is uploaded by the member
+     * service when req.file exists.
      */
     const result =
-      await memberService.createMember({
-        firstName: firstName.trim(),
+      await memberService.createMember(
+        {
+          firstName: firstName.trim(),
 
-        middleName:
-          middleName !== undefined &&
-          middleName !== null
-            ? middleName.trim()
-            : null,
+          middleName:
+            middleName !== undefined &&
+            middleName !== null
+              ? middleName.trim()
+              : null,
 
-        lastName: lastName.trim(),
+          lastName: lastName.trim(),
 
-        email: email.trim(),
+          email: email.trim(),
 
-        phone:
-          phone !== undefined &&
-          phone !== null &&
-          phone !== ""
-            ? phone.trim()
-            : null,
+          phone:
+            phone !== undefined &&
+            phone !== null &&
+            phone !== ""
+              ? phone.trim()
+              : null,
 
-        password,
+          password,
 
-        roleId: Number(roleId),
+          roleId: Number(roleId),
 
-        gender:
-          gender !== undefined &&
-          gender !== ""
-            ? gender
-            : null,
+          gender:
+            gender !== undefined &&
+            gender !== ""
+              ? gender
+              : null,
 
-        dateOfBirth:
-          dateOfBirth || null,
+          dateOfBirth:
+            dateOfBirth || null,
 
-        baptismDate:
-          baptismDate || null,
+          baptismDate:
+            baptismDate || null,
 
-        address:
-          address !== undefined &&
-          address !== null &&
-          address !== ""
-            ? address.trim()
-            : null,
+          address:
+            address !== undefined &&
+            address !== null &&
+            address !== ""
+              ? address.trim()
+              : null,
 
-        status:
-          status !== undefined &&
-          status !== ""
-            ? status
-            : "Active",
-      });
+          status:
+            status !== undefined &&
+            status !== ""
+              ? status
+              : "Active",
+        },
+
+        req.file || null
+      );
 
     return successResponse(
       res,

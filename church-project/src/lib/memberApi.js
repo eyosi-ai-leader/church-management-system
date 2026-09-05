@@ -2,6 +2,9 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:5000/api";
 
+/**
+ * Get JWT token from browser cookie
+ */
 function getAuthToken() {
   if (typeof document === "undefined") {
     return null;
@@ -22,6 +25,13 @@ function getAuthToken() {
     : null;
 }
 
+/**
+ * Common API request helper
+ *
+ * Supports:
+ * - JSON requests
+ * - FormData requests
+ */
 async function request(
   url,
   options = {}
@@ -34,16 +44,30 @@ async function request(
     );
   }
 
+  const isFormData =
+    options.body instanceof FormData;
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    ...(options.headers || {}),
+  };
+
+  /**
+   * Do NOT manually set Content-Type
+   * for FormData.
+   *
+   * The browser automatically sets:
+   * multipart/form-data
+   * with the required boundary.
+   */
+  if (!isFormData) {
+    headers["Content-Type"] =
+      "application/json";
+  }
+
   const response = await fetch(url, {
     ...options,
-
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type":
-        "application/json",
-      ...(options.headers || {}),
-    },
-
+    headers,
     cache: "no-store",
   });
 
@@ -64,21 +88,6 @@ async function request(
 
 /**
  * Get all members
- *
- * Supports:
- * - pagination
- * - search
- * - status
- * - role
- * - sorting
- *
- * Role IDs:
- *
- * 1 = Admin
- * 2 = Pastor
- * 3 = Church Elder
- * 4 = Ministry Leader
- * 5 = Member
  */
 export async function getMembers({
   page = 1,
@@ -127,7 +136,7 @@ export async function getMembers({
 }
 
 /**
- * Get single member
+ * Get member by ID
  */
 export async function getMemberById(
   id
@@ -139,6 +148,8 @@ export async function getMemberById(
 
 /**
  * Create member
+ *
+ * Supports FormData for profile image upload.
  */
 export async function createMember(
   data
@@ -147,7 +158,7 @@ export async function createMember(
     `${API_URL}/members`,
     {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data,
     }
   );
 }
@@ -163,7 +174,10 @@ export async function updateMember(
     `${API_URL}/members/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(data),
+      body:
+        data instanceof FormData
+          ? data
+          : JSON.stringify(data),
     }
   );
 }

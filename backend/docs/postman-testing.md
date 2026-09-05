@@ -135,7 +135,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwicm9sZUlkIjo1LCJlbWFpbCI6ImFiZWJ
   "email": "admin1@church.test",
   "password": "Admin@12345"
 }
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGVJZCI6MSwiZW1haWwiOiJhZG1pbjFAY2h1cmNoLnRlc3QiLCJpYXQiOjE3ODc4NTA3MzYsImV4cCI6MTc4NzkzNzEzNn0.djOcLnZ-YhMccEFwTfGHYq5szzgSN-ULQn5yqpGlEUY
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTEsInJvbGVJZCI6MSwiZW1haWwiOiJhZG1pbjFAY2h1cmNoLnRlc3QiLCJpYXQiOjE3ODg1OTg3OTQsImV4cCI6MTc4ODY4NTE5NH0.uaAGUGskaEM1rcx4KSEv8Do09TOE-nfV46ZqcXwOlkM
 {
   "email": "pastor1@church.test",
   "password": "Pastor@12345"
