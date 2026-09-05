@@ -7,17 +7,6 @@ const {
 
 /**
  * Create member
- *
- * Creates:
- * - User account
- * - Member record
- * - Optional profile image
- *
- * Both user and member are handled by the member service.
- *
- * Member number is generated automatically
- * by the member model and cannot be provided
- * manually by the client.
  */
 const createMember = async (req, res) => {
   try {
@@ -36,9 +25,6 @@ const createMember = async (req, res) => {
       status,
     } = req.body;
 
-    /**
-     * Validate first name
-     */
     if (
       typeof firstName !== "string" ||
       !firstName.trim()
@@ -50,11 +36,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate middle name
-     *
-     * Middle name is optional.
-     */
     if (
       middleName !== undefined &&
       middleName !== null &&
@@ -67,9 +48,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate last name
-     */
     if (
       typeof lastName !== "string" ||
       !lastName.trim()
@@ -81,9 +59,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate email
-     */
     if (
       typeof email !== "string" ||
       !email.trim()
@@ -95,9 +70,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate email format
-     */
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -109,9 +81,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate password
-     */
     if (
       typeof password !== "string" ||
       !password
@@ -131,15 +100,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate role
-     *
-     * 1 = Admin
-     * 2 = Pastor
-     * 3 = Church Elder
-     * 4 = Ministry Leader
-     * 5 = Member
-     */
     if (
       roleId === undefined ||
       roleId === null ||
@@ -154,9 +114,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate gender when provided
-     */
     if (
       gender !== undefined &&
       gender !== null &&
@@ -171,9 +128,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate status when provided
-     */
     if (
       status !== undefined &&
       status !== null &&
@@ -188,15 +142,6 @@ const createMember = async (req, res) => {
       );
     }
 
-    /**
-     * Create user + member
-     *
-     * Member number is generated automatically
-     * inside the member model.
-     *
-     * Profile image is uploaded by the member
-     * service when req.file exists.
-     */
     const result =
       await memberService.createMember(
         {
@@ -310,14 +255,6 @@ const getMemberById = async (req, res) => {
 
 /**
  * Update member
- *
- * Updates:
- * - Personal information
- * - Church information
- * - Account role
- *
- * Member number is intentionally excluded because
- * it is a permanent system-generated identity.
  */
 const updateMember = async (req, res) => {
   try {
@@ -337,15 +274,6 @@ const updateMember = async (req, res) => {
       status,
     } = req.body;
 
-    /**
-     * Validate role ID when provided
-     *
-     * 1 = Admin
-     * 2 = Pastor
-     * 3 = Church Elder
-     * 4 = Ministry Leader
-     * 5 = Member
-     */
     if (
       roleId !== undefined &&
       (
@@ -361,9 +289,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate gender when provided
-     */
     if (
       gender !== undefined &&
       gender !== null &&
@@ -378,9 +303,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate status when provided
-     */
     if (
       status !== undefined &&
       status !== null &&
@@ -395,9 +317,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate first name
-     */
     if (
       firstName !== undefined &&
       (
@@ -412,11 +331,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate middle name
-     *
-     * Middle name is optional.
-     */
     if (
       middleName !== undefined &&
       middleName !== null &&
@@ -429,9 +343,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate last name
-     */
     if (
       lastName !== undefined &&
       (
@@ -446,9 +357,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate email
-     */
     if (
       email !== undefined &&
       (
@@ -463,9 +371,6 @@ const updateMember = async (req, res) => {
       );
     }
 
-    /**
-     * Validate email format
-     */
     if (
       email !== undefined &&
       email.trim()
@@ -482,11 +387,6 @@ const updateMember = async (req, res) => {
       }
     }
 
-    /**
-     * Update member
-     *
-     * Member number is not accepted or changed.
-     */
     await memberService.updateMember(
       id,
       {
@@ -526,20 +426,13 @@ const updateMember = async (req, res) => {
             : undefined,
 
         gender,
-
         dateOfBirth,
-
         baptismDate,
-
         address,
-
         status,
       }
     );
 
-    /**
-     * Return complete updated member
-     */
     const updatedMember =
       await memberService.getMemberById(id);
 
@@ -598,26 +491,14 @@ const deleteMember = async (req, res) => {
  * Get all members
  *
  * Supports:
+ * - Pagination
+ * - Search
+ * - Status filter
+ * - Role filter
+ * - Sorting
  *
- * Pagination:
- * GET /api/members?page=1&limit=10
- *
- * Search:
- * GET /api/members?search=Abebe
- *
- * Status:
- * GET /api/members?status=Active
- *
- * Roles:
- *
- * 1 = Admin
- * 2 = Pastor
- * 3 = Church Elder
- * 4 = Ministry Leader
- * 5 = Member
- *
- * Sorting:
- * GET /api/members?sortBy=first_name&sortOrder=asc
+ * IMPORTANT:
+ * The service expects ONE options object.
  */
 const getAllMembers = async (req, res) => {
   try {
@@ -653,10 +534,8 @@ const getAllMembers = async (req, res) => {
 
     const sortOrder =
       req.query.sortOrder !== undefined
-        ? req.query.sortOrder
-            .trim()
-            .toLowerCase()
-        : "asc";
+        ? req.query.sortOrder.trim().toLowerCase()
+        : "desc";
 
     /**
      * Validate page
@@ -704,6 +583,12 @@ const getAllMembers = async (req, res) => {
 
     /**
      * Validate role ID
+     *
+     * 1 = Admin
+     * 2 = Pastor
+     * 3 = Church Elder
+     * 4 = Ministry Leader
+     * 5 = Member
      */
     if (
       roleId !== "" &&
@@ -755,16 +640,22 @@ const getAllMembers = async (req, res) => {
       );
     }
 
+    /**
+     * IMPORTANT FIX:
+     *
+     * memberService.getAllMembers()
+     * expects ONE object, not separate arguments.
+     */
     const result =
-      await memberService.getAllMembers(
+      await memberService.getAllMembers({
         page,
         limit,
         search,
         status,
         roleId,
         sortBy,
-        sortOrder
-      );
+        sortOrder,
+      });
 
     return res.status(200).json({
       success: true,

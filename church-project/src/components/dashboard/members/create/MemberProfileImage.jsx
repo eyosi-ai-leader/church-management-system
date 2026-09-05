@@ -13,12 +13,25 @@ export default function MemberProfileImage({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert(
+        "Only JPG, PNG, and WEBP images are allowed."
+      );
+      event.target.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Profile image must be smaller than 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert(
+        "Profile image must be smaller than 10MB."
+      );
+      event.target.value = "";
       return;
     }
 
@@ -65,14 +78,15 @@ export default function MemberProfileImage({
 
           <input
             id="profileImage"
+            name="profileImage"
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,.webp"
             onChange={handleFileChange}
             className="hidden"
           />
 
           <p className="mt-2 text-xs text-slate-400">
-            JPG, PNG or WEBP. Maximum 5MB.
+            JPG, PNG or WEBP. Maximum 10MB.
           </p>
         </div>
       </div>

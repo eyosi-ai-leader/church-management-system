@@ -41,40 +41,54 @@ const createMember = async ({
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [userResult] = await connection.execute(
-      userQuery,
-      [
-        firstName,
-        middleName || null,
-        lastName,
-        email,
-        password,
-        roleId,
-        phone || null,
-        profileImage || null,
-      ]
-    );
+    const [userResult] =
+      await connection.execute(
+        userQuery,
+        [
+          firstName,
+          middleName || null,
+          lastName,
+          email,
+          password,
+          roleId,
+          phone || null,
+          profileImage || null,
+        ]
+      );
 
-    const userId = userResult.insertId;
+    const userId =
+      userResult.insertId;
 
     /**
-     * Generate next member number
+     * Generate next member number.
      *
      * Existing formats supported:
      * MEM-0001
      * CHMS-2026-0001
      *
-     * Old/custom values such as 2345 are ignored.
+     * Old/custom values such as 2345
+     * are ignored.
      */
     const sequenceQuery = `
       SELECT
         MAX(
           CASE
             WHEN member_number REGEXP '^CHMS-[0-9]{4}-[0-9]+$'
-              THEN CAST(SUBSTRING_INDEX(member_number, '-', -1) AS UNSIGNED)
+              THEN CAST(
+                SUBSTRING_INDEX(
+                  member_number,
+                  '-',
+                  -1
+                ) AS UNSIGNED
+              )
 
             WHEN member_number REGEXP '^MEM-[0-9]+$'
-              THEN CAST(SUBSTRING(member_number, 5) AS UNSIGNED)
+              THEN CAST(
+                SUBSTRING(
+                  member_number,
+                  5
+                ) AS UNSIGNED
+              )
 
             ELSE 0
           END
@@ -139,7 +153,8 @@ const createMember = async ({
 
     return {
       userId,
-      memberId: memberResult.insertId,
+      memberId:
+        memberResult.insertId,
       memberNumber,
     };
   } catch (error) {
@@ -153,7 +168,9 @@ const createMember = async ({
 /**
  * Get member by ID
  */
-const getMemberById = async (memberId) => {
+const getMemberById = async (
+  memberId
+) => {
   const query = `
     SELECT
       m.id,
@@ -194,10 +211,11 @@ const getMemberById = async (memberId) => {
     LIMIT 1
   `;
 
-  const [rows] = await db.execute(
-    query,
-    [memberId]
-  );
+  const [rows] =
+    await db.execute(
+      query,
+      [memberId]
+    );
 
   return rows[0] || null;
 };
@@ -225,7 +243,8 @@ const updateMember = async (
     status,
   }
 ) => {
-  const connection = await db.getConnection();
+  const connection =
+    await db.getConnection();
 
   try {
     await connection.beginTransaction();
@@ -305,7 +324,9 @@ const updateMember = async (
 /**
  * Delete member
  */
-const deleteMember = async (memberId) => {
+const deleteMember = async (
+  memberId
+) => {
   const query = `
     DELETE FROM members
     WHERE id = ?
@@ -322,16 +343,21 @@ const deleteMember = async (memberId) => {
 
 /**
  * Get all members
+ *
+ * IMPORTANT:
+ * This function accepts ONE options object.
+ *
+ * This matches memberService.getAllMembers().
  */
-const getAllMembers = async (
-  limit,
-  offset,
+const getAllMembers = async ({
+  limit = 10,
+  offset = 0,
   search = "",
   status = "",
   roleId = "",
   sortBy = "created_at",
-  sortOrder = "asc"
-) => {
+  sortOrder = "desc",
+} = {}) => {
   let query = `
     SELECT
       m.id,
@@ -386,7 +412,8 @@ const getAllMembers = async (
       )
     `);
 
-    const searchTerm = `%${search}%`;
+    const searchTerm =
+      `%${search}%`;
 
     queryParams.push(
       searchTerm,
@@ -431,6 +458,9 @@ const getAllMembers = async (
 
   /**
    * Sorting whitelist
+   *
+   * Only these values can reach
+   * the SQL ORDER BY clause.
    */
   const allowedSortFields = {
     first_name: "u.first_name",
@@ -445,7 +475,7 @@ const getAllMembers = async (
     allowedSortFields.created_at;
 
   const sortDirection =
-    sortOrder.toLowerCase() === "desc"
+    sortOrder === "desc"
       ? "DESC"
       : "ASC";
 
@@ -454,9 +484,15 @@ const getAllMembers = async (
     LIMIT ? OFFSET ?
   `;
 
+  /**
+   * Always provide actual numeric values
+   * to mysql2 for LIMIT/OFFSET.
+   *
+   * This prevents undefined bind parameters.
+   */
   queryParams.push(
-    limit,
-    offset
+    Number(limit),
+    Number(offset)
   );
 
   const [rows] =
@@ -470,12 +506,17 @@ const getAllMembers = async (
 
 /**
  * Count members
+ *
+ * IMPORTANT:
+ * This function accepts ONE options object.
+ *
+ * This matches memberService.countMembers().
  */
-const countMembers = async (
+const countMembers = async ({
   search = "",
   status = "",
-  roleId = ""
-) => {
+  roleId = "",
+} = {}) => {
   let query = `
     SELECT COUNT(*) AS total
 
@@ -503,7 +544,8 @@ const countMembers = async (
       )
     `);
 
-    const searchTerm = `%${search}%`;
+    const searchTerm =
+      `%${search}%`;
 
     queryParams.push(
       searchTerm,

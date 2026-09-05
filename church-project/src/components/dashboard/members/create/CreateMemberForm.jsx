@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 
-import { ArrowLeft, Check, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Loader2,
+} from "lucide-react";
 
 import Link from "next/link";
 
@@ -30,27 +34,22 @@ const initialForm = {
 };
 
 export default function CreateMemberForm() {
-  const [form, setForm] =
-    useState(initialForm);
+  const [form, setForm] = useState(initialForm);
 
   const [profileImage, setProfileImage] =
     useState(null);
 
-  const [preview, setPreview] =
-    useState("");
+  const [preview, setPreview] = useState("");
 
-  const [errors, setErrors] =
-    useState({});
+  const [errors, setErrors] = useState({});
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [serverError, setServerError] =
     useState("");
 
   function handleChange(event) {
-    const { name, value } =
-      event.target;
+    const { name, value } = event.target;
 
     setForm((previous) => ({
       ...previous,
@@ -66,17 +65,20 @@ export default function CreateMemberForm() {
   }
 
   function handleProfileImage(file) {
-    setProfileImage(file);
-
     if (!file) {
+      setProfileImage(null);
       setPreview("");
       return;
     }
+
+    setProfileImage(file);
 
     const imageUrl =
       URL.createObjectURL(file);
 
     setPreview(imageUrl);
+
+    setServerError("");
   }
 
   function validate() {
@@ -97,7 +99,7 @@ export default function CreateMemberForm() {
         "Email is required.";
     } else if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        form.email
+        form.email.trim()
       )
     ) {
       nextErrors.email =
@@ -130,12 +132,10 @@ export default function CreateMemberForm() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const validationErrors =
-      validate();
+    const validationErrors = validate();
 
     if (
-      Object.keys(validationErrors)
-        .length > 0
+      Object.keys(validationErrors).length > 0
     ) {
       setErrors(validationErrors);
       return;
@@ -145,50 +145,86 @@ export default function CreateMemberForm() {
       setSaving(true);
       setServerError("");
 
-      const payload = {
-        firstName:
-          form.firstName.trim(),
+      const formData = new FormData();
 
-        middleName:
-          form.middleName.trim() ||
-          undefined,
+      formData.append(
+        "firstName",
+        form.firstName.trim()
+      );
 
-        lastName:
-          form.lastName.trim(),
+      if (form.middleName.trim()) {
+        formData.append(
+          "middleName",
+          form.middleName.trim()
+        );
+      }
 
-        email:
-          form.email.trim(),
+      formData.append(
+        "lastName",
+        form.lastName.trim()
+      );
 
-        password:
-          form.password,
+      formData.append(
+        "email",
+        form.email.trim()
+      );
 
-        phone:
-          form.phone.trim() ||
-          undefined,
+      formData.append(
+        "password",
+        form.password
+      );
 
-        gender:
-          form.gender,
+      if (form.phone.trim()) {
+        formData.append(
+          "phone",
+          form.phone.trim()
+        );
+      }
 
-        dateOfBirth:
-          form.dateOfBirth ||
-          undefined,
+      formData.append(
+        "gender",
+        form.gender
+      );
 
-        baptismDate:
-          form.baptismDate ||
-          undefined,
+      if (form.dateOfBirth) {
+        formData.append(
+          "dateOfBirth",
+          form.dateOfBirth
+        );
+      }
 
-        address:
-          form.address.trim() ||
-          undefined,
+      if (form.baptismDate) {
+        formData.append(
+          "baptismDate",
+          form.baptismDate
+        );
+      }
 
-        roleId:
-          Number(form.roleId),
+      if (form.address.trim()) {
+        formData.append(
+          "address",
+          form.address.trim()
+        );
+      }
 
-        status:
-          form.status || "Active",
-      };
+      formData.append(
+        "roleId",
+        form.roleId
+      );
 
-      await createMember(payload);
+      formData.append(
+        "status",
+        form.status || "Active"
+      );
+
+      if (profileImage) {
+        formData.append(
+          "profileImage",
+          profileImage
+        );
+      }
+
+      await createMember(formData);
 
       window.location.href =
         "/dashboard/members";
@@ -213,7 +249,6 @@ export default function CreateMemberForm() {
         onSubmit={handleSubmit}
         className="space-y-6"
       >
-        {/* Header */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <Link
@@ -235,7 +270,6 @@ export default function CreateMemberForm() {
             </p>
           </div>
 
-          {/* Desktop Actions */}
           <div className="hidden items-center gap-2 lg:flex">
             <Link
               href="/dashboard/members"
@@ -267,47 +301,40 @@ export default function CreateMemberForm() {
           </div>
         </div>
 
-        {/* Server Error */}
         {serverError && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {serverError}
           </div>
         )}
 
-        {/* Profile Image */}
         <MemberProfileImage
           preview={preview}
           onChange={handleProfileImage}
         />
 
-        {/* Personal Information */}
         <MemberPersonalInfo
           form={form}
           errors={errors}
           onChange={handleChange}
         />
 
-        {/* Contact Information */}
         <MemberContactInfo
           form={form}
           errors={errors}
           onChange={handleChange}
         />
 
-        {/* Church Information */}
         <MemberChurchInfo
           form={form}
           onChange={handleChange}
         />
 
-        {/* Account Information */}
         <MemberAccountInfo
           form={form}
           errors={errors}
           onChange={handleChange}
         />
 
-        {/* Mobile Actions */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:hidden">
           <div className="flex gap-3">
             <Link
