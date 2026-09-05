@@ -1,47 +1,133 @@
 const db = require("../config/db");
 
 /**
- * Create a new member
+ * Create User + Member
+ *
+ * Both records are created inside one transaction.
+ *
+ * If either insert fails:
+ * - User creation is rolled back
+ * - Member creation is rolled back
+ *
+ * This prevents orphaned user accounts.
  */
 const createMember = async ({
-  userId,
+  firstName,
+  middleName,
+  lastName,
+  email,
+  password,
+  roleId,
+  phone,
+  profileImage,
   memberNumber,
   gender,
-  phone,
   dateOfBirth,
   baptismDate,
   address,
+  status,
 }) => {
-  const query = `
-    INSERT INTO members (
-      user_id,
-      member_number,
-      gender,
-      phone,
-      date_of_birth,
-      baptism_date,
-      address
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+  const connection =
+    await db.getConnection();
 
-  const [result] = await db.execute(query, [
-    userId,
-    memberNumber,
-    gender,
-    phone || null,
-    dateOfBirth || null,
-    baptismDate || null,
-    address || null,
-  ]);
+  try {
+    await connection.beginTransaction();
 
-  return result;
+    /**
+     * Create user/account
+     */
+    const userQuery = `
+      INSERT INTO users (
+        first_name,
+        middle_name,
+        last_name,
+        email,
+        password,
+        role_id,
+        phone,
+        profile_image
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [userResult] =
+      await connection.execute(
+        userQuery,
+        [
+          firstName,
+          middleName || null,
+          lastName,
+          email,
+          password,
+          roleId,
+          phone || null,
+          profileImage || null,
+        ]
+      );
+
+    const userId =
+      userResult.insertId;
+
+    /**
+     * Create member/church record
+     */
+    const memberQuery = `
+      INSERT INTO members (
+        user_id,
+        member_number,
+        gender,
+        phone,
+        date_of_birth,
+        baptism_date,
+        address,
+        status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [memberResult] =
+      await connection.execute(
+        memberQuery,
+        [
+          userId,
+          memberNumber,
+          gender || null,
+          phone || null,
+          dateOfBirth || null,
+          baptismDate || null,
+          address || null,
+          status || "Active",
+        ]
+      );
+
+    /**
+     * Commit both records
+     */
+    await connection.commit();
+
+    return {
+      userId,
+      memberId: memberResult.insertId,
+    };
+  } catch (error) {
+    /**
+     * Roll back everything if
+     * any database operation fails.
+     */
+    await connection.rollback();
+
+    throw error;
+  } finally {
+    connection.release();
+  }
 };
 
 /**
  * Get member by ID
  */
-const getMemberById = async (memberId) => {
+const getMemberById = async (
+  memberId
+) => {
   const query = `
     SELECT
       m.id,
@@ -49,11 +135,15 @@ const getMemberById = async (memberId) => {
       m.member_number,
 
       u.first_name,
+      u.middle_name,
       u.last_name,
       u.email,
       u.role_id,
+
       r.name AS role_name,
+
       u.phone AS user_phone,
+      u.profile_image,
 
       m.gender,
       m.phone,
@@ -78,9 +168,11 @@ const getMemberById = async (memberId) => {
     LIMIT 1
   `;
 
-  const [rows] = await db.execute(query, [
-    memberId,
-  ]);
+  const [rows] =
+    await db.execute(
+      query,
+      [memberId]
+    );
 
   return rows[0] || null;
 };
@@ -92,6 +184,7 @@ const getMemberById = async (memberId) => {
  *
  * users:
  * - first_name
+ * - middle_name
  * - last_name
  * - email
  * - role_id
@@ -106,13 +199,15 @@ const getMemberById = async (memberId) => {
  * - address
  * - status
  *
- * Both tables are updated inside one transaction.
+ * Both tables are updated inside
+ * one transaction.
  */
 const updateMember = async (
   memberId,
   userId,
   {
     firstName,
+    middleName,
     lastName,
     email,
     roleId,
@@ -138,6 +233,7 @@ const updateMember = async (
       UPDATE users
       SET
         first_name = ?,
+        middle_name = ?,
         last_name = ?,
         email = ?,
         role_id = ?,
@@ -146,14 +242,18 @@ const updateMember = async (
       WHERE id = ?
     `;
 
-    await connection.execute(userQuery, [
-      firstName,
-      lastName,
-      email,
-      roleId,
-      phone || null,
-      userId,
-    ]);
+    await connection.execute(
+      userQuery,
+      [
+        firstName,
+        middleName || null,
+        lastName,
+        email,
+        roleId,
+        phone || null,
+        userId,
+      ]
+    );
 
     /**
      * Update member/church information
@@ -177,7 +277,7 @@ const updateMember = async (
         memberQuery,
         [
           memberNumber,
-          gender,
+          gender || null,
           phone || null,
           dateOfBirth || null,
           baptismDate || null,
@@ -192,6 +292,7 @@ const updateMember = async (
     return result;
   } catch (error) {
     await connection.rollback();
+
     throw error;
   } finally {
     connection.release();
@@ -200,17 +301,22 @@ const updateMember = async (
 
 /**
  * Delete member
+ *
+ * Currently deletes the member record only.
  */
-const deleteMember = async (memberId) => {
+const deleteMember = async (
+  memberId
+) => {
   const query = `
     DELETE FROM members
     WHERE id = ?
   `;
 
-  const [result] = await db.execute(
-    query,
-    [memberId]
-  );
+  const [result] =
+    await db.execute(
+      query,
+      [memberId]
+    );
 
   return result;
 };
@@ -223,14 +329,6 @@ const deleteMember = async (memberId) => {
  * - Status filter
  * - Role filter
  * - Sorting
- *
- * Role IDs:
- *
- * 1 = Admin
- * 2 = Pastor
- * 3 = Church Elder
- * 4 = Ministry Leader
- * 5 = Member
  */
 const getAllMembers = async (
   limit,
@@ -248,6 +346,7 @@ const getAllMembers = async (
       m.member_number,
 
       u.first_name,
+      u.middle_name,
       u.last_name,
       u.email,
 
@@ -255,6 +354,7 @@ const getAllMembers = async (
       r.name AS role_name,
 
       u.phone AS user_phone,
+      u.profile_image,
 
       m.gender,
       m.phone,
@@ -285,6 +385,7 @@ const getAllMembers = async (
     conditions.push(`
       (
         u.first_name LIKE ?
+        OR u.middle_name LIKE ?
         OR u.last_name LIKE ?
         OR u.email LIKE ?
         OR m.member_number LIKE ?
@@ -292,9 +393,11 @@ const getAllMembers = async (
       )
     `);
 
-    const searchTerm = `%${search}%`;
+    const searchTerm =
+      `%${search}%`;
 
     queryParams.push(
+      searchTerm,
       searchTerm,
       searchTerm,
       searchTerm,
@@ -307,7 +410,10 @@ const getAllMembers = async (
    * Status filter
    */
   if (status) {
-    conditions.push("m.status = ?");
+    conditions.push(
+      "m.status = ?"
+    );
+
     queryParams.push(status);
   }
 
@@ -315,7 +421,10 @@ const getAllMembers = async (
    * Role filter
    */
   if (roleId) {
-    conditions.push("u.role_id = ?");
+    conditions.push(
+      "u.role_id = ?"
+    );
+
     queryParams.push(roleId);
   }
 
@@ -324,7 +433,9 @@ const getAllMembers = async (
    */
   if (conditions.length > 0) {
     query += `
-      WHERE ${conditions.join(" AND ")}
+      WHERE ${conditions.join(
+        " AND "
+      )}
     `;
   }
 
@@ -336,7 +447,8 @@ const getAllMembers = async (
   const allowedSortFields = {
     first_name: "u.first_name",
     last_name: "u.last_name",
-    member_number: "m.member_number",
+    member_number:
+      "m.member_number",
     email: "u.email",
     created_at: "m.created_at",
   };
@@ -346,7 +458,8 @@ const getAllMembers = async (
     allowedSortFields.created_at;
 
   const sortDirection =
-    sortOrder.toLowerCase() === "desc"
+    sortOrder.toLowerCase() ===
+    "desc"
       ? "DESC"
       : "ASC";
 
@@ -358,12 +471,16 @@ const getAllMembers = async (
     LIMIT ? OFFSET ?
   `;
 
-  queryParams.push(limit, offset);
-
-  const [rows] = await db.execute(
-    query,
-    queryParams
+  queryParams.push(
+    limit,
+    offset
   );
+
+  const [rows] =
+    await db.execute(
+      query,
+      queryParams
+    );
 
   return rows;
 };
@@ -395,6 +512,7 @@ const countMembers = async (
     conditions.push(`
       (
         u.first_name LIKE ?
+        OR u.middle_name LIKE ?
         OR u.last_name LIKE ?
         OR u.email LIKE ?
         OR m.member_number LIKE ?
@@ -402,9 +520,11 @@ const countMembers = async (
       )
     `);
 
-    const searchTerm = `%${search}%`;
+    const searchTerm =
+      `%${search}%`;
 
     queryParams.push(
+      searchTerm,
       searchTerm,
       searchTerm,
       searchTerm,
@@ -417,7 +537,10 @@ const countMembers = async (
    * Status
    */
   if (status) {
-    conditions.push("m.status = ?");
+    conditions.push(
+      "m.status = ?"
+    );
+
     queryParams.push(status);
   }
 
@@ -425,7 +548,10 @@ const countMembers = async (
    * Role
    */
   if (roleId) {
-    conditions.push("u.role_id = ?");
+    conditions.push(
+      "u.role_id = ?"
+    );
+
     queryParams.push(roleId);
   }
 
@@ -434,16 +560,21 @@ const countMembers = async (
    */
   if (conditions.length > 0) {
     query += `
-      WHERE ${conditions.join(" AND ")}
+      WHERE ${conditions.join(
+        " AND "
+      )}
     `;
   }
 
-  const [rows] = await db.execute(
-    query,
-    queryParams
-  );
+  const [rows] =
+    await db.execute(
+      query,
+      queryParams
+    );
 
-  return Number(rows[0].total);
+  return Number(
+    rows[0].total
+  );
 };
 
 module.exports = {

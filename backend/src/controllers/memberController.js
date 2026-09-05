@@ -7,22 +7,268 @@ const {
 
 /**
  * Create member
+ *
+ * Creates:
+ * - User account
+ * - Member record
+ *
+ * Both are handled by the member service.
  */
 const createMember = async (req, res) => {
   try {
+    const {
+      firstName,
+      middleName,
+      lastName,
+      email,
+      phone,
+      password,
+      roleId,
+      memberNumber,
+      gender,
+      dateOfBirth,
+      baptismDate,
+      address,
+      status,
+    } = req.body;
+
+    /**
+     * Validate first name
+     */
+    if (
+      typeof firstName !== "string" ||
+      !firstName.trim()
+    ) {
+      return errorResponse(
+        res,
+        "First name is required",
+        400
+      );
+    }
+
+    /**
+     * Validate middle name
+     *
+     * Middle name is optional.
+     */
+    if (
+      middleName !== undefined &&
+      middleName !== null &&
+      typeof middleName !== "string"
+    ) {
+      return errorResponse(
+        res,
+        "Middle name must be a string",
+        400
+      );
+    }
+
+    /**
+     * Validate last name
+     */
+    if (
+      typeof lastName !== "string" ||
+      !lastName.trim()
+    ) {
+      return errorResponse(
+        res,
+        "Last name is required",
+        400
+      );
+    }
+
+    /**
+     * Validate email
+     */
+    if (
+      typeof email !== "string" ||
+      !email.trim()
+    ) {
+      return errorResponse(
+        res,
+        "Email is required",
+        400
+      );
+    }
+
+    /**
+     * Validate email format
+     */
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email.trim())) {
+      return errorResponse(
+        res,
+        "Please provide a valid email address",
+        400
+      );
+    }
+
+    /**
+     * Validate password
+     */
+    if (
+      typeof password !== "string" ||
+      !password
+    ) {
+      return errorResponse(
+        res,
+        "Password is required",
+        400
+      );
+    }
+
+    if (password.length < 6) {
+      return errorResponse(
+        res,
+        "Password must be at least 6 characters",
+        400
+      );
+    }
+
+    /**
+     * Validate role
+     *
+     * 1 = Admin
+     * 2 = Pastor
+     * 3 = Church Elder
+     * 4 = Ministry Leader
+     * 5 = Member
+     */
+    if (
+      roleId === undefined ||
+      roleId === null ||
+      !Number.isInteger(Number(roleId)) ||
+      Number(roleId) < 1 ||
+      Number(roleId) > 5
+    ) {
+      return errorResponse(
+        res,
+        "Role ID must be between 1 and 5",
+        400
+      );
+    }
+
+    /**
+     * Validate member number
+     */
+    if (
+      typeof memberNumber !== "string" ||
+      !memberNumber.trim()
+    ) {
+      return errorResponse(
+        res,
+        "Member number is required",
+        400
+      );
+    }
+
+    /**
+     * Validate gender when provided
+     */
+    if (
+      gender !== undefined &&
+      gender !== null &&
+      gender !== "" &&
+      gender !== "Male" &&
+      gender !== "Female"
+    ) {
+      return errorResponse(
+        res,
+        "Gender must be either Male or Female",
+        400
+      );
+    }
+
+    /**
+     * Validate status when provided
+     */
+    if (
+      status !== undefined &&
+      status !== null &&
+      status !== "" &&
+      status !== "Active" &&
+      status !== "Inactive"
+    ) {
+      return errorResponse(
+        res,
+        "Status must be either Active or Inactive",
+        400
+      );
+    }
+
+    /**
+     * Create user + member
+     */
     const result =
-      await memberService.createMember(req.body);
+      await memberService.createMember({
+        firstName: firstName.trim(),
+
+        middleName:
+          middleName !== undefined &&
+          middleName !== null
+            ? middleName.trim()
+            : null,
+
+        lastName: lastName.trim(),
+
+        email: email.trim(),
+
+        phone:
+          phone !== undefined &&
+          phone !== null &&
+          phone !== ""
+            ? phone.trim()
+            : null,
+
+        password,
+
+        roleId: Number(roleId),
+
+        memberNumber:
+          memberNumber.trim(),
+
+        gender:
+          gender !== undefined &&
+          gender !== ""
+            ? gender
+            : null,
+
+        dateOfBirth:
+          dateOfBirth || null,
+
+        baptismDate:
+          baptismDate || null,
+
+        address:
+          address !== undefined &&
+          address !== null &&
+          address !== ""
+            ? address.trim()
+            : null,
+
+        status:
+          status !== undefined &&
+          status !== ""
+            ? status
+            : "Active",
+      });
 
     return successResponse(
       res,
       "Member created successfully",
       {
-        memberId: result.insertId,
+        memberId: result.memberId,
+        userId: result.userId,
       },
       201
     );
   } catch (error) {
-    console.error("Create member error:", error);
+    console.error(
+      "Create member error:",
+      error
+    );
 
     return errorResponse(
       res,
@@ -50,7 +296,10 @@ const getMemberById = async (req, res) => {
       200
     );
   } catch (error) {
-    console.error("Get member error:", error);
+    console.error(
+      "Get member error:",
+      error
+    );
 
     return errorResponse(
       res,
@@ -75,6 +324,7 @@ const updateMember = async (req, res) => {
 
     const {
       firstName,
+      middleName,
       lastName,
       email,
       phone,
@@ -146,7 +396,7 @@ const updateMember = async (req, res) => {
     }
 
     /**
-     * Validate required string fields when provided
+     * Validate first name
      */
     if (
       firstName !== undefined &&
@@ -162,6 +412,26 @@ const updateMember = async (req, res) => {
       );
     }
 
+    /**
+     * Validate middle name
+     *
+     * Middle name is optional.
+     */
+    if (
+      middleName !== undefined &&
+      middleName !== null &&
+      typeof middleName !== "string"
+    ) {
+      return errorResponse(
+        res,
+        "Middle name must be a string",
+        400
+      );
+    }
+
+    /**
+     * Validate last name
+     */
     if (
       lastName !== undefined &&
       (
@@ -176,6 +446,9 @@ const updateMember = async (req, res) => {
       );
     }
 
+    /**
+     * Validate email
+     */
     if (
       email !== undefined &&
       (
@@ -190,6 +463,9 @@ const updateMember = async (req, res) => {
       );
     }
 
+    /**
+     * Validate member number
+     */
     if (
       memberNumber !== undefined &&
       (
@@ -205,7 +481,7 @@ const updateMember = async (req, res) => {
     }
 
     /**
-     * Validate email format when provided
+     * Validate email format
      */
     if (
       email !== undefined &&
@@ -234,6 +510,16 @@ const updateMember = async (req, res) => {
             ? firstName.trim()
             : undefined,
 
+        middleName:
+          middleName !== undefined
+            ? (
+                middleName === null ||
+                middleName === ""
+                  ? null
+                  : middleName.trim()
+              )
+            : undefined,
+
         lastName:
           lastName !== undefined
             ? lastName.trim()
@@ -260,15 +546,19 @@ const updateMember = async (req, res) => {
             : undefined,
 
         gender,
+
         dateOfBirth,
+
         baptismDate,
+
         address,
+
         status,
       }
     );
 
     /**
-     * Return the complete updated member
+     * Return complete updated member
      */
     const updatedMember =
       await memberService.getMemberById(id);
@@ -310,7 +600,10 @@ const deleteMember = async (req, res) => {
       200
     );
   } catch (error) {
-    console.error("Delete member error:", error);
+    console.error(
+      "Delete member error:",
+      error
+    );
 
     return errorResponse(
       res,
@@ -342,9 +635,6 @@ const deleteMember = async (req, res) => {
  * 3 = Church Elder
  * 4 = Ministry Leader
  * 5 = Member
- *
- * Example:
- * GET /api/members?roleId=3
  *
  * Sorting:
  * GET /api/members?sortBy=first_name&sortOrder=asc
@@ -433,13 +723,7 @@ const getAllMembers = async (req, res) => {
     }
 
     /**
-     * Validate roleId
-     *
-     * 1 = Admin
-     * 2 = Pastor
-     * 3 = Church Elder
-     * 4 = Ministry Leader
-     * 5 = Member
+     * Validate role ID
      */
     if (
       roleId !== "" &&
@@ -457,7 +741,7 @@ const getAllMembers = async (req, res) => {
     }
 
     /**
-     * Validate sortBy
+     * Validate sort field
      */
     const allowedSortFields = [
       "first_name",
@@ -478,7 +762,7 @@ const getAllMembers = async (req, res) => {
     }
 
     /**
-     * Validate sortOrder
+     * Validate sort order
      */
     if (
       sortOrder !== "asc" &&

@@ -1,12 +1,47 @@
+const bcrypt = require("bcrypt");
 const memberModel = require("../models/memberModel");
 
 /**
  * Create member
+ *
+ * Creates both:
+ * - User account
+ * - Member profile
+ *
+ * Password is hashed before it reaches the model.
  */
 const createMember = async (memberData) => {
-  return await memberModel.createMember(
-    memberData
-  );
+  try {
+    const hashedPassword =
+      await bcrypt.hash(
+        memberData.password,
+        10
+      );
+
+    const memberWithHashedPassword = {
+      ...memberData,
+      password: hashedPassword,
+    };
+
+    return await memberModel.createMember(
+      memberWithHashedPassword
+    );
+  } catch (error) {
+    if (
+      error.code === "ER_DUP_ENTRY"
+    ) {
+      const duplicateError =
+        new Error(
+          "Email or member number already exists."
+        );
+
+      duplicateError.statusCode = 409;
+
+      throw duplicateError;
+    }
+
+    throw error;
+  }
 };
 
 /**
@@ -38,6 +73,7 @@ const getMemberById = async (memberId) => {
  *
  * users:
  * - first_name
+ * - middle_name
  * - last_name
  * - email
  * - phone
@@ -76,6 +112,11 @@ const updateMember = async (
       memberData.firstName !== undefined
         ? memberData.firstName
         : existingMember.first_name,
+
+    middleName:
+      memberData.middleName !== undefined
+        ? memberData.middleName
+        : existingMember.middle_name,
 
     lastName:
       memberData.lastName !== undefined
