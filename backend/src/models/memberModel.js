@@ -236,6 +236,7 @@ const updateMember = async (
     email,
     roleId,
     phone,
+    profileImage,
     gender,
     dateOfBirth,
     baptismDate,
@@ -251,6 +252,11 @@ const updateMember = async (
 
     /**
      * Update user
+     *
+     * profileImage can be:
+     * - existing image URL
+     * - new Cloudinary image URL
+     * - null when image is removed
      */
     const userQuery = `
       UPDATE users
@@ -261,6 +267,7 @@ const updateMember = async (
         email = ?,
         role_id = ?,
         phone = ?,
+        profile_image = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
@@ -274,6 +281,7 @@ const updateMember = async (
         email,
         roleId,
         phone || null,
+        profileImage || null,
         userId,
       ]
     );
@@ -320,6 +328,7 @@ const updateMember = async (
     connection.release();
   }
 };
+
 
 /**
  * Delete member

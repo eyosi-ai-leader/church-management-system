@@ -109,6 +109,7 @@ router.put(
   "/:id",
   authMiddleware,
   roleMiddleware(1, 2),
+  uploadProfileImage.single("profileImage"),
   updateMemberValidator,
   validateRequest,
   memberController.updateMember

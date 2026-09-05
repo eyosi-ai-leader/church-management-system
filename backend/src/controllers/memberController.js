@@ -272,6 +272,7 @@ const updateMember = async (req, res) => {
       baptismDate,
       address,
       status,
+      removeProfileImage,
     } = req.body;
 
     if (
@@ -387,6 +388,14 @@ const updateMember = async (req, res) => {
       }
     }
 
+    /*
+     * Convert removeProfileImage from
+     * FormData string to boolean.
+     */
+    const shouldRemoveProfileImage =
+      removeProfileImage === true ||
+      removeProfileImage === "true";
+
     await memberService.updateMember(
       id,
       {
@@ -430,7 +439,18 @@ const updateMember = async (req, res) => {
         baptismDate,
         address,
         status,
-      }
+
+        removeProfileImage:
+          shouldRemoveProfileImage,
+      },
+
+      /*
+       * Uploaded profile image.
+       *
+       * Multer puts the uploaded file
+       * inside req.file.
+       */
+      req.file || null
     );
 
     const updatedMember =

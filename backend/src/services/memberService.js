@@ -123,16 +123,95 @@ const getMemberById = async (
 };
 
 /**
+ * Extract Cloudinary public ID from a secure URL.
+ *
+ * Example:
+ * https://res.cloudinary.com/demo/image/upload/v1234567890/chms/member-profiles/photo.jpg
+ *
+ * Returns:
+ * chms/member-profiles/photo
+ */
+const getCloudinaryPublicId = (imageUrl) => {
+  if (!imageUrl || typeof imageUrl !== "string") {
+    return null;
+  }
+
+  try {
+    const url = new URL(imageUrl);
+
+    const uploadPath = "/upload/";
+
+    const uploadIndex =
+      url.pathname.indexOf(uploadPath);
+
+    if (uploadIndex === -1) {
+      return null;
+    }
+
+    let publicPath =
+      url.pathname.substring(
+        uploadIndex + uploadPath.length
+      );
+
+    /**
+     * Remove Cloudinary version:
+     *
+     * v1234567890/chms/member-profiles/photo.jpg
+     *
+     * becomes:
+     * chms/member-profiles/photo.jpg
+     */
+    publicPath =
+      publicPath.replace(
+        /^v\d+\//,
+        ""
+      );
+
+    /**
+     * Remove file extension.
+     */
+    publicPath =
+      publicPath.replace(
+        /\.[^/.]+$/,
+        ""
+      );
+
+    return decodeURIComponent(
+      publicPath
+    );
+  } catch (error) {
+    console.error(
+      "Failed to extract Cloudinary public ID:",
+      error.message
+    );
+
+    return null;
+  }
+};
+
+/**
  * Update member
+ *
+ * Supports:
+ * - Personal information
+ * - Account information
+ * - Church information
+ * - Profile image upload
+ * - Profile image replacement
+ * - Profile image removal
  */
 const updateMember = async (
   memberId,
-  memberData
+  memberData,
+  profileImage = null
 ) => {
   /**
    * First retrieve the existing member.
-   * This gives us the user_id and allows
-   * partial updates.
+   *
+   * This gives us:
+   * - user_id
+   * - existing member information
+   * - existing profile image
    */
   const existingMember =
     await memberModel.getMemberById(
@@ -150,61 +229,195 @@ const updateMember = async (
   }
 
   /**
-   * Merge incoming data with existing data.
+   * Existing Cloudinary image.
    */
-  const updatedData = {
-    firstName:
-      memberData.firstName ??
-      existingMember.first_name,
+  const oldProfileImage =
+    existingMember.profile_image || null;
 
-    middleName:
-      memberData.middleName ??
-      existingMember.middle_name,
+  /**
+   * Determine whether the user requested
+   * profile image removal.
+   */
+  const removeProfileImage =
+    memberData.removeProfileImage === true;
 
-    lastName:
-      memberData.lastName ??
-      existingMember.last_name,
-
-    email:
-      memberData.email ??
-      existingMember.email,
-
-    phone:
-      memberData.phone ??
-      existingMember.phone,
-
-    roleId:
-      memberData.roleId ??
-      existingMember.role_id,
-
-    gender:
-      memberData.gender ??
-      existingMember.gender,
-
-    dateOfBirth:
-      memberData.dateOfBirth ??
-      existingMember.date_of_birth,
-
-    baptismDate:
-      memberData.baptismDate ??
-      existingMember.baptism_date,
-
-    address:
-      memberData.address ??
-      existingMember.address,
-
-    status:
-      memberData.status ??
-      existingMember.status,
-  };
+  /**
+   * This will contain the newly uploaded
+   * Cloudinary image if one is uploaded.
+   */
+  let uploadedImage = null;
 
   try {
-    return await memberModel.updateMember(
-      memberId,
-      existingMember.user_id,
-      updatedData
-    );
+    /**
+     * Upload new profile image first.
+     *
+     * We do this BEFORE changing the database.
+     */
+    if (profileImage) {
+      uploadedImage =
+        await uploadImage(
+          profileImage.buffer,
+          {
+            folder:
+              "chms/member-profiles",
+          }
+        );
+    }
+
+    /**
+     * Determine which profile image URL
+     * should be stored in the database.
+     *
+     * Case 1:
+     * New image uploaded
+     * → save new image URL
+     *
+     * Case 2:
+     * Remove requested
+     * → save null
+     *
+     * Case 3:
+     * Nothing changed
+     * → keep existing image URL
+     */
+    let profileImageUrl =
+      oldProfileImage;
+
+    if (uploadedImage) {
+      profileImageUrl =
+        uploadedImage.secureUrl;
+    } else if (
+      removeProfileImage
+    ) {
+      profileImageUrl = null;
+    }
+
+    /**
+     * Merge incoming data with
+     * existing member data.
+     */
+    const updatedData = {
+      firstName:
+        memberData.firstName ??
+        existingMember.first_name,
+
+      middleName:
+        memberData.middleName !== undefined
+          ? memberData.middleName
+          : existingMember.middle_name,
+
+      lastName:
+        memberData.lastName ??
+        existingMember.last_name,
+
+      email:
+        memberData.email ??
+        existingMember.email,
+
+      phone:
+        memberData.phone ??
+        existingMember.phone,
+
+      roleId:
+        memberData.roleId ??
+        existingMember.role_id,
+
+      profileImage:
+        profileImageUrl,
+
+      gender:
+        memberData.gender ??
+        existingMember.gender,
+
+      dateOfBirth:
+        memberData.dateOfBirth ??
+        existingMember.date_of_birth,
+
+      baptismDate:
+        memberData.baptismDate ??
+        existingMember.baptism_date,
+
+      address:
+        memberData.address ??
+        existingMember.address,
+
+      status:
+        memberData.status ??
+        existingMember.status,
+    };
+
+    /**
+     * Update database.
+     */
+    const result =
+      await memberModel.updateMember(
+        memberId,
+        existingMember.user_id,
+        updatedData
+      );
+
+    /**
+     * Database update succeeded.
+     *
+     * Now remove the old Cloudinary image
+     * if it was replaced or removed.
+     */
+    if (
+      oldProfileImage &&
+      (
+        uploadedImage ||
+        removeProfileImage
+      )
+    ) {
+      const oldPublicId =
+        getCloudinaryPublicId(
+          oldProfileImage
+        );
+
+      if (oldPublicId) {
+        try {
+          await deleteImage(
+            oldPublicId
+          );
+        } catch (deleteError) {
+          /**
+           * Do not fail the member update
+           * just because old Cloudinary
+           * cleanup failed.
+           *
+           * The database already contains
+           * the correct image.
+           */
+          console.error(
+            "Failed to delete old profile image:",
+            deleteError.message
+          );
+        }
+      }
+    }
+
+    return result;
   } catch (error) {
+    /**
+     * If a new image was uploaded to Cloudinary
+     * but the database update failed,
+     * remove the newly uploaded image.
+     *
+     * This prevents orphaned Cloudinary files.
+     */
+    if (uploadedImage?.publicId) {
+      try {
+        await deleteImage(
+          uploadedImage.publicId
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Failed to clean up uploaded profile image:",
+          cleanupError.message
+        );
+      }
+    }
+
     /**
      * Handle duplicate email.
      */

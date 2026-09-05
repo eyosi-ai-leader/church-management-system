@@ -21,6 +21,7 @@ import AccountInformationForm from "./AccountInformationForm";
 
 const initialForm = {
   firstName: "",
+  middleName: "",
   lastName: "",
   email: "",
   phone: "",
@@ -60,6 +61,9 @@ export default function EditMemberPage() {
   const [member, setMember] = useState(null);
   const [form, setForm] = useState(initialForm);
 
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -87,6 +91,11 @@ export default function EditMemberPage() {
         setForm({
           firstName:
             data.first_name || "",
+
+          middleName:
+            data.middle_name ||
+            data.middleName ||
+            "",
 
           lastName:
             data.last_name || "",
@@ -127,6 +136,13 @@ export default function EditMemberPage() {
           status:
             data.status || "Active",
         });
+
+        const existingImage =
+          data.profile_image ||
+          data.profileImage ||
+          "";
+
+        setImagePreview(existingImage);
       } catch (err) {
         setError(
           err.message ||
@@ -155,6 +171,62 @@ export default function EditMemberPage() {
     setSuccess("");
   };
 
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError(
+        "Please select a JPG, PNG, or WEBP image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError(
+        "Profile image must be smaller than 10MB."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    setProfileImage(file);
+
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setImagePreview(previewUrl);
+
+    setError("");
+    setSuccess("");
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    setImagePreview("");
+    setError("");
+    setSuccess("");
+
+    const input =
+      document.getElementById("profileImage");
+
+    if (input) {
+      input.value = "";
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -163,45 +235,84 @@ export default function EditMemberPage() {
       setError("");
       setSuccess("");
 
-      const payload = {
-        firstName:
-          form.firstName.trim(),
+      const formData = new FormData();
 
-        lastName:
-          form.lastName.trim(),
+      formData.append(
+        "firstName",
+        form.firstName.trim()
+      );
 
-        email:
-          form.email.trim(),
+      formData.append(
+        "middleName",
+        form.middleName.trim()
+      );
 
-        phone:
-          form.phone.trim() || null,
+      formData.append(
+        "lastName",
+        form.lastName.trim()
+      );
 
-        gender:
-          form.gender || null,
+      formData.append(
+        "email",
+        form.email.trim()
+      );
 
-        dateOfBirth:
-          form.dateOfBirth || null,
+      formData.append(
+        "phone",
+        form.phone.trim()
+      );
 
-        address:
-          form.address.trim() || null,
+      formData.append(
+        "gender",
+        form.gender || ""
+      );
 
-        memberNumber:
-          form.memberNumber.trim(),
+      formData.append(
+        "dateOfBirth",
+        form.dateOfBirth || ""
+      );
 
-        roleId:
-          Number(form.roleId),
+      formData.append(
+        "address",
+        form.address.trim()
+      );
 
-        baptismDate:
-          form.baptismDate || null,
+      formData.append(
+        "memberNumber",
+        form.memberNumber.trim()
+      );
 
-        status:
-          form.status,
-      };
+      formData.append(
+        "roleId",
+        String(form.roleId)
+      );
+
+      formData.append(
+        "baptismDate",
+        form.baptismDate || ""
+      );
+
+      formData.append(
+        "status",
+        form.status
+      );
+
+      if (profileImage) {
+        formData.append(
+          "profileImage",
+          profileImage
+        );
+      }
+
+      formData.append(
+        "removeProfileImage",
+        imagePreview ? "false" : "true"
+      );
 
       const result =
         await updateMember(
           memberId,
-          payload
+          formData
         );
 
       const updatedMember =
@@ -209,7 +320,16 @@ export default function EditMemberPage() {
 
       if (updatedMember) {
         setMember(updatedMember);
+
+        const updatedImage =
+          updatedMember.profile_image ||
+          updatedMember.profileImage ||
+          "";
+
+        setImagePreview(updatedImage);
       }
+
+      setProfileImage(null);
 
       setSuccess(
         "Member information updated successfully."
@@ -303,6 +423,10 @@ export default function EditMemberPage() {
         <PersonalInformationForm
           form={form}
           onChange={handleChange}
+          profileImage={profileImage}
+          imagePreview={imagePreview}
+          onImageChange={handleImageChange}
+          onRemoveImage={handleRemoveImage}
         />
 
         <ChurchInformationForm
