@@ -16,6 +16,7 @@ export default function MemberActionsMenu({
   onDelete,
   onChangeStatus,
   onChangeRole,
+  canManage,
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -51,6 +52,17 @@ export default function MemberActionsMenu({
     }
   }
 
+  /*
+   * This component is only rendered for Admin
+   * and Pastor from MembersTable.
+   *
+   * Keep this guard as a second frontend
+   * protection layer.
+   */
+  if (!canManage) {
+    return null;
+  }
+
   return (
     <div
       ref={menuRef}
@@ -59,7 +71,9 @@ export default function MemberActionsMenu({
       <button
         type="button"
         title="More actions"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() =>
+          setOpen((value) => !value)
+        }
         className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
       >
         <MoreHorizontal size={16} />

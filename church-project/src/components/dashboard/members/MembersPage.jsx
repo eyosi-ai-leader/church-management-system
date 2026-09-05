@@ -15,6 +15,8 @@ import {
   updateMember,
 } from "@/lib/memberApi";
 
+import { canManageMembers } from "@/lib/roles";
+
 import MembersTable from "./MembersTable";
 import MemberFilters from "./MemberFilters";
 import MemberPagination from "./MemberPagination";
@@ -52,6 +54,29 @@ export default function MembersPage() {
 
   const [roleTarget, setRoleTarget] = useState(null);
   const [changingRole, setChangingRole] = useState(false);
+
+  const [roleId, setRoleId] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        setRoleId(Number(user?.roleId));
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load current user:",
+        error
+      );
+    } finally {
+      setUserLoaded(true);
+    }
+  }, []);
+
+  const canManage = canManageMembers(roleId);
 
   const loadMembers = useCallback(
     async (showRefresh = false) => {
@@ -107,8 +132,23 @@ export default function MembersPage() {
   );
 
   useEffect(() => {
+    if (!userLoaded) {
+      return;
+    }
+
     loadMembers();
-  }, [loadMembers]);
+  }, [userLoaded, loadMembers]);
+
+  function handleRefresh() {
+    if (refreshing) {
+      return;
+    }
+
+    setRefreshing(true);
+    setError("");
+
+    window.location.reload();
+  }
 
   function handleSearch(value) {
     setFilters((previous) => ({
@@ -181,7 +221,7 @@ export default function MembersPage() {
   }
 
   async function handleDelete() {
-    if (!deleteTarget) {
+    if (!deleteTarget || !canManage) {
       return;
     }
 
@@ -210,76 +250,90 @@ export default function MembersPage() {
   }
 
   function handleChangeStatus(member) {
+    if (!canManage) {
+      return;
+    }
+
     setStatusTarget(member);
     setError("");
   }
 
-async function handleStatusConfirm(member, status) {
-  if (!member) {
-    return;
+  async function handleStatusConfirm(
+    member,
+    status
+  ) {
+    if (!member || !canManage) {
+      return;
+    }
+
+    try {
+      setChangingStatus(true);
+      setError("");
+
+      await updateMember(member.id, {
+        status,
+      });
+
+      setStatusTarget(null);
+
+      await loadMembers(true);
+    } catch (error) {
+      console.error(
+        "Change member status error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Failed to change member status."
+      );
+    } finally {
+      setChangingStatus(false);
+    }
   }
-
-  try {
-    setChangingStatus(true);
-    setError("");
-
-    await updateMember(member.id, {
-      status,
-    });
-
-    setStatusTarget(null);
-
-    await loadMembers(true);
-  } catch (error) {
-    console.error(
-      "Change member status error:",
-      error
-    );
-
-    setError(
-      error.message ||
-        "Failed to change member status."
-    );
-  } finally {
-    setChangingStatus(false);
-  }
-}
 
   function handleChangeRole(member) {
+    if (!canManage) {
+      return;
+    }
+
     setRoleTarget(member);
     setError("");
   }
 
- async function handleRoleConfirm(member, roleId) {
-  if (!member) {
-    return;
+  async function handleRoleConfirm(
+    member,
+    selectedRoleId
+  ) {
+    if (!member || !canManage) {
+      return;
+    }
+
+    try {
+      setChangingRole(true);
+      setError("");
+
+      await updateMember(member.id, {
+        roleId: Number(selectedRoleId),
+      });
+
+      setRoleTarget(null);
+
+      await loadMembers(true);
+    } catch (error) {
+      console.error(
+        "Change member role error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Failed to change member role."
+      );
+    } finally {
+      setChangingRole(false);
+    }
   }
-
-  try {
-    setChangingRole(true);
-    setError("");
-
-    await updateMember(member.id, {
-      roleId: Number(roleId),
-    });
-
-    setRoleTarget(null);
-
-    await loadMembers(true);
-  } catch (error) {
-    console.error(
-      "Change member role error:",
-      error
-    );
-
-    setError(
-      error.message ||
-        "Failed to change member role."
-    );
-  } finally {
-    setChangingRole(false);
-  }
-}
 
   const hasFilters =
     Boolean(filters.search) ||
@@ -312,33 +366,45 @@ async function handleStatusConfirm(member, status) {
           </div>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-            Manage church members, monitor their status, and
-            keep member information organized.
+            {canManage
+              ? "Manage church members, monitor their status, and keep member information organized."
+              : "View and oversee church member information, status, and directory records."}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-  <button
-    type="button"
-    onClick={() => window.location.reload()}
-    className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
-  >
-    <RefreshCw size={16} />
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw
+              size={16}
+              className={
+                refreshing
+                  ? "animate-spin"
+                  : ""
+              }
+            />
 
-    <span className="hidden sm:inline">
-      Refresh
-    </span>
-  </button>
+            <span className="hidden sm:inline">
+              {refreshing
+                ? "Refreshing..."
+                : "Refresh"}
+            </span>
+          </button>
 
-  <Link
-    href="/dashboard/members/create"
-    className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-  >
-    <Plus size={17} />
-
-    <span>Add member</span>
-  </Link>
-</div>
+          {canManage && (
+            <Link
+              href="/dashboard/members/create"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <Plus size={17} />
+              <span>Add member</span>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Summary */}
@@ -432,10 +498,13 @@ async function handleStatusConfirm(member, status) {
 
             <button
               type="button"
-              onClick={() => loadMembers(true)}
-              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Try again
+              {refreshing
+                ? "Refreshing..."
+                : "Try again"}
             </button>
           </div>
         </div>
@@ -452,6 +521,7 @@ async function handleStatusConfirm(member, status) {
         onDelete={setDeleteTarget}
         onChangeStatus={handleChangeStatus}
         onChangeRole={handleChangeRole}
+        canManage={canManage}
       />
 
       {/* Pagination */}
@@ -465,36 +535,46 @@ async function handleStatusConfirm(member, status) {
           />
         )}
 
-      {/* Delete dialog */}
+      {/* Delete Dialog */}
 
-      <MemberDeleteDialog
-        member={deleteTarget}
-        deleting={deleting}
-        onCancel={() =>
-          setDeleteTarget(null)
-        }
-        onConfirm={handleDelete}
-      />
+      {canManage && (
+        <MemberDeleteDialog
+          member={deleteTarget}
+          deleting={deleting}
+          onCancel={() =>
+            setDeleteTarget(null)
+          }
+          onConfirm={handleDelete}
+        />
+      )}
 
       {/* Change Status Modal */}
 
-   <ChangeStatusModal
-  member={statusTarget}
-  open={Boolean(statusTarget)}
-  saving={changingStatus}
-  onClose={() => setStatusTarget(null)}
-  onConfirm={handleStatusConfirm}
-/>
+      {canManage && (
+        <ChangeStatusModal
+          member={statusTarget}
+          open={Boolean(statusTarget)}
+          saving={changingStatus}
+          onClose={() =>
+            setStatusTarget(null)
+          }
+          onConfirm={handleStatusConfirm}
+        />
+      )}
 
       {/* Change Role Modal */}
 
-      <ChangeRoleModal
-  member={roleTarget}
-  open={Boolean(roleTarget)}
-  saving={changingRole}
-  onClose={() => setRoleTarget(null)}
-  onConfirm={handleRoleConfirm}
-/>
+      {canManage && (
+        <ChangeRoleModal
+          member={roleTarget}
+          open={Boolean(roleTarget)}
+          saving={changingRole}
+          onClose={() =>
+            setRoleTarget(null)
+          }
+          onConfirm={handleRoleConfirm}
+        />
+      )}
     </div>
   );
 }

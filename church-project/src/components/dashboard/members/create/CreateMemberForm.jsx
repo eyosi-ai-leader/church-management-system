@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ArrowLeft,
@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { createMember } from "@/lib/memberApi";
+import { canManageMembers } from "@/lib/roles";
 
 import MemberProfileImage from "./MemberProfileImage";
 import MemberPersonalInfo from "./MemberPersonalInfo";
@@ -34,6 +36,11 @@ const initialForm = {
 };
 
 export default function CreateMemberForm() {
+  const router = useRouter();
+
+  const [authorized, setAuthorized] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
   const [form, setForm] = useState(initialForm);
 
   const [profileImage, setProfileImage] =
@@ -47,6 +54,48 @@ export default function CreateMemberForm() {
 
   const [serverError, setServerError] =
     useState("");
+
+  /*
+   * Verify that the current user is allowed
+   * to create members.
+   *
+   * Admin  = 1
+   * Pastor = 2
+   *
+   * Church Elder, Ministry Leader and Member
+   * are redirected back to the members page.
+   */
+  useEffect(() => {
+    try {
+      const storedUser =
+        localStorage.getItem("user");
+
+      if (!storedUser) {
+        router.replace("/dashboard/members");
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      const roleId = Number(user?.roleId);
+
+      if (!canManageMembers(roleId)) {
+        router.replace("/dashboard/members");
+        return;
+      }
+
+      setAuthorized(true);
+    } catch (error) {
+      console.error(
+        "Failed to verify member creation access:",
+        error
+      );
+
+      router.replace("/dashboard/members");
+    } finally {
+      setCheckingAccess(false);
+    }
+  }, [router]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -241,6 +290,33 @@ export default function CreateMemberForm() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /*
+   * While checking the user's role,
+   * don't render the form.
+   */
+  if (checkingAccess) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
+          <Loader2
+            size={18}
+            className="animate-spin"
+          />
+          Checking access...
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * Unauthorized users are redirected.
+   * This prevents the form from flashing
+   * before the redirect happens.
+   */
+  if (!authorized) {
+    return null;
   }
 
   return (

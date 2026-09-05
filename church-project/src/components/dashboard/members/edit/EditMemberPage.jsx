@@ -15,6 +15,8 @@ import {
   updateMember,
 } from "@/lib/memberApi";
 
+import { canManageMembers } from "@/lib/roles";
+
 import PersonalInformationForm from "./PersonalInformationForm";
 import ChurchInformationForm from "./ChurchInformationForm";
 import AccountInformationForm from "./AccountInformationForm";
@@ -58,11 +60,26 @@ export default function EditMemberPage() {
 
   const memberId = params?.id;
 
+  /*
+   * Authorization state
+   *
+   * Admin  = 1
+   * Pastor = 2
+   *
+   * Only Admin and Pastor can edit members.
+   */
+  const [authorized, setAuthorized] = useState(false);
+  const [checkingAccess, setCheckingAccess] =
+    useState(true);
+
   const [member, setMember] = useState(null);
   const [form, setForm] = useState(initialForm);
 
-  const [profileImage, setProfileImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
+  const [profileImage, setProfileImage] =
+    useState(null);
+
+  const [imagePreview, setImagePreview] =
+    useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,6 +87,49 @@ export default function EditMemberPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  /*
+   * Check whether the current user can manage members.
+   *
+   * This protects the edit page itself, not just
+   * the Edit button.
+   */
+  useEffect(() => {
+    try {
+      const storedUser =
+        localStorage.getItem("user");
+
+      if (!storedUser) {
+        router.replace("/dashboard/members");
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      const roleId = Number(user?.roleId);
+
+      if (!canManageMembers(roleId)) {
+        router.replace("/dashboard/members");
+        return;
+      }
+
+      setAuthorized(true);
+    } catch (error) {
+      console.error(
+        "Failed to verify member edit access:",
+        error
+      );
+
+      router.replace("/dashboard/members");
+    } finally {
+      setCheckingAccess(false);
+    }
+  }, [router]);
+
+  /*
+   * Load member information.
+   *
+   * This existing functionality remains unchanged.
+   */
   useEffect(() => {
     if (!memberId) {
       return;
@@ -172,7 +232,8 @@ export default function EditMemberPage() {
   };
 
   const handleImageChange = (event) => {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     if (!file) {
       return;
@@ -220,7 +281,9 @@ export default function EditMemberPage() {
     setSuccess("");
 
     const input =
-      document.getElementById("profileImage");
+      document.getElementById(
+        "profileImage"
+      );
 
     if (input) {
       input.value = "";
@@ -350,6 +413,24 @@ export default function EditMemberPage() {
     }
   };
 
+  /*
+   * Show loading state while checking
+   * the user's authorization.
+   */
+  if (checkingAccess) {
+    return <LoadingState />;
+  }
+
+  /*
+   * Unauthorized users are redirected.
+   *
+   * Returning null prevents the edit form
+   * from briefly appearing during redirect.
+   */
+  if (!authorized) {
+    return null;
+  }
+
   if (loading) {
     return <LoadingState />;
   }
@@ -379,6 +460,7 @@ export default function EditMemberPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
       {/* Header */}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <Link
@@ -402,6 +484,7 @@ export default function EditMemberPage() {
       </div>
 
       {/* Error */}
+
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
@@ -409,6 +492,7 @@ export default function EditMemberPage() {
       )}
 
       {/* Success */}
+
       {success && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
           <Check size={16} />
@@ -439,6 +523,7 @@ export default function EditMemberPage() {
         />
 
         {/* Actions */}
+
         <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
           <Link
             href={`/dashboard/members/${memberId}`}

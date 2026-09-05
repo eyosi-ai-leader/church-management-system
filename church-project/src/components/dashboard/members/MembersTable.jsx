@@ -33,8 +33,13 @@ function getRoleName(member) {
       break;
   }
 
-  if (member.role_name) return member.role_name;
-  if (member.roleName) return member.roleName;
+  if (member.role_name) {
+    return member.role_name;
+  }
+
+  if (member.roleName) {
+    return member.roleName;
+  }
 
   return "Member";
 }
@@ -64,11 +69,17 @@ function SortButton({
       )}
 
       {active && sortOrder === "asc" && (
-        <ArrowUp size={12} className="text-slate-700" />
+        <ArrowUp
+          size={12}
+          className="text-slate-700"
+        />
       )}
 
       {active && sortOrder === "desc" && (
-        <ArrowDown size={12} className="text-slate-700" />
+        <ArrowDown
+          size={12}
+          className="text-slate-700"
+        />
       )}
     </button>
   );
@@ -77,44 +88,46 @@ function SortButton({
 function LoadingRows() {
   return (
     <>
-      {Array.from({ length: 6 }).map((_, index) => (
-        <tr key={index}>
-          <td className="px-4 py-4">
-            <div className="flex animate-pulse items-center gap-3">
-              <div className="h-10 w-10 shrink-0 rounded-full bg-slate-100" />
+      {Array.from({ length: 6 }).map(
+        (_, index) => (
+          <tr key={index}>
+            <td className="px-4 py-4">
+              <div className="flex animate-pulse items-center gap-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-slate-100" />
 
-              <div className="min-w-0 space-y-2">
-                <div className="h-3.5 w-32 rounded bg-slate-100" />
-                <div className="h-3 w-24 rounded bg-slate-100" />
+                <div className="min-w-0 space-y-2">
+                  <div className="h-3.5 w-32 rounded bg-slate-100" />
+                  <div className="h-3 w-24 rounded bg-slate-100" />
+                </div>
               </div>
-            </div>
-          </td>
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="h-3 w-16 animate-pulse rounded bg-slate-100" />
-          </td>
+            <td className="px-3 py-4">
+              <div className="h-3 w-16 animate-pulse rounded bg-slate-100" />
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="h-3 w-28 animate-pulse rounded bg-slate-100" />
-          </td>
+            <td className="px-3 py-4">
+              <div className="h-3 w-28 animate-pulse rounded bg-slate-100" />
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="h-6 w-20 animate-pulse rounded-full bg-slate-100" />
-          </td>
+            <td className="px-3 py-4">
+              <div className="h-6 w-20 animate-pulse rounded-full bg-slate-100" />
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
-          </td>
+            <td className="px-3 py-4">
+              <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="h-3 w-16 animate-pulse rounded bg-slate-100" />
-          </td>
+            <td className="px-3 py-4">
+              <div className="h-3 w-16 animate-pulse rounded bg-slate-100" />
+            </td>
 
-          <td className="px-3 py-4">
-            <div className="ml-auto h-8 w-24 animate-pulse rounded-lg bg-slate-100" />
-          </td>
-        </tr>
-      ))}
+            <td className="px-3 py-4">
+              <div className="ml-auto h-8 w-24 animate-pulse rounded-lg bg-slate-100" />
+            </td>
+          </tr>
+        )
+      )}
     </>
   );
 }
@@ -128,6 +141,7 @@ export default function MembersTable({
   onDelete,
   onChangeStatus,
   onChangeRole,
+  canManage,
 }) {
   if (!loading && members.length === 0) {
     return (
@@ -153,7 +167,6 @@ export default function MembersTable({
       <table className="w-full table-fixed border-collapse">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50/70">
-            {/* Member */}
             <th className="w-[23%] px-4 py-3.5 text-left">
               <SortButton
                 field="first_name"
@@ -164,7 +177,6 @@ export default function MembersTable({
               />
             </th>
 
-            {/* Member Number */}
             <th className="w-[11%] px-3 py-3.5 text-left">
               <SortButton
                 field="member_number"
@@ -175,7 +187,6 @@ export default function MembersTable({
               />
             </th>
 
-            {/* Email */}
             <th className="w-[20%] px-3 py-3.5 text-left">
               <SortButton
                 field="email"
@@ -186,21 +197,18 @@ export default function MembersTable({
               />
             </th>
 
-            {/* Role */}
             <th className="w-[13%] px-3 py-3.5 text-left">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Role
               </span>
             </th>
 
-            {/* Status */}
             <th className="w-[11%] px-3 py-3.5 text-left">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Status
               </span>
             </th>
 
-            {/* Joined */}
             <th className="w-[11%] px-3 py-3.5 text-left">
               <SortButton
                 field="created_at"
@@ -211,7 +219,6 @@ export default function MembersTable({
               />
             </th>
 
-            {/* Actions */}
             <th className="w-[11%] px-3 py-3.5 text-right">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Actions
@@ -241,9 +248,14 @@ export default function MembersTable({
                 "";
 
               const fullName =
-                [firstName, middleName, lastName]
+                [
+                  firstName,
+                  middleName,
+                  lastName,
+                ]
                   .filter(Boolean)
-                  .join(" ") || "Unnamed member";
+                  .join(" ") ||
+                "Unnamed member";
 
               const initials = getInitials(
                 firstName,
@@ -271,6 +283,7 @@ export default function MembersTable({
                   className="group transition hover:bg-slate-50/80"
                 >
                   {/* Member */}
+
                   <td className="max-w-0 px-4 py-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-xs font-bold text-white shadow-sm">
@@ -309,6 +322,7 @@ export default function MembersTable({
                   </td>
 
                   {/* Member Number */}
+
                   <td className="max-w-0 px-3 py-4">
                     <span
                       title={memberNumber}
@@ -319,6 +333,7 @@ export default function MembersTable({
                   </td>
 
                   {/* Email */}
+
                   <td className="max-w-0 px-3 py-4">
                     <span
                       title={member.email || ""}
@@ -329,6 +344,7 @@ export default function MembersTable({
                   </td>
 
                   {/* Role */}
+
                   <td className="max-w-0 px-3 py-4">
                     <span
                       title={role}
@@ -339,6 +355,7 @@ export default function MembersTable({
                   </td>
 
                   {/* Status */}
+
                   <td className="max-w-0 px-3 py-4">
                     <span
                       className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold ${
@@ -362,6 +379,7 @@ export default function MembersTable({
                   </td>
 
                   {/* Joined */}
+
                   <td className="whitespace-nowrap px-3 py-4">
                     <span className="text-xs font-medium text-slate-500">
                       {member.created_at
@@ -380,8 +398,11 @@ export default function MembersTable({
                   </td>
 
                   {/* Actions */}
+
                   <td className="whitespace-nowrap px-3 py-4">
                     <div className="flex items-center justify-end gap-0.5">
+                      {/* Everyone can view */}
+
                       <Link
                         href={`/dashboard/members/${member.id}`}
                         title="View member"
@@ -390,29 +411,42 @@ export default function MembersTable({
                         <Eye size={16} />
                       </Link>
 
-                      <Link
-                        href={`/dashboard/members/${member.id}/edit`}
-                        title="Edit member"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        <Pencil size={15} />
-                      </Link>
+                      {/* Admin + Pastor only */}
 
-                      <button
-                        type="button"
-                        title="Delete member"
-                        onClick={() => onDelete(member)}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {canManage && (
+                        <>
+                          <Link
+                            href={`/dashboard/members/${member.id}/edit`}
+                            title="Edit member"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+                          >
+                            <Pencil size={15} />
+                          </Link>
 
-                      <MemberActionsMenu
-                        member={member}
-                        onDelete={onDelete}
-                        onChangeStatus={onChangeStatus}
-                        onChangeRole={onChangeRole}
-                      />
+                          <button
+                            type="button"
+                            title="Delete member"
+                            onClick={() =>
+                              onDelete(member)
+                            }
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+
+                          <MemberActionsMenu
+                            member={member}
+                            onDelete={onDelete}
+                            onChangeStatus={
+                              onChangeStatus
+                            }
+                            onChangeRole={
+                              onChangeRole
+                            }
+                            canManage={canManage}
+                          />
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

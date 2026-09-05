@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { getMemberById } from "@/lib/memberApi";
+import { canManageMembers } from "@/lib/roles";
 
 function getRoleName(member) {
   switch (Number(member?.role_id)) {
@@ -154,6 +155,39 @@ export default function MemberDetailsPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
 
+  const [roleId, setRoleId] = React.useState(null);
+  const [userLoaded, setUserLoaded] = React.useState(false);
+
+  /*
+   * Load current user's role.
+   *
+   * Admin  = 1
+   * Pastor = 2
+   * Elder  = 3
+   * Ministry Leader = 4
+   * Member = 5
+   */
+  React.useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+
+        setRoleId(Number(user?.roleId));
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load current user:",
+        error
+      );
+    } finally {
+      setUserLoaded(true);
+    }
+  }, []);
+
+  const canManage = canManageMembers(roleId);
+
   React.useEffect(() => {
     if (!memberId) {
       return;
@@ -201,7 +235,7 @@ export default function MemberDetailsPage() {
     };
   }, [memberId]);
 
-  if (loading) {
+  if (!userLoaded || loading) {
     return (
       <main className="min-h-full bg-slate-50/50 p-4 sm:p-6 lg:p-8">
         <LoadingPage />
@@ -291,6 +325,7 @@ export default function MemberDetailsPage() {
     <main className="min-h-full bg-slate-50/50 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Page header */}
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <Link
@@ -314,21 +349,27 @@ export default function MemberDetailsPage() {
             </p>
           </div>
 
-          <Link
-            href={`/dashboard/members/${member.id}/edit`}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            <Edit3 size={16} />
-            Edit member
-          </Link>
+          {/* Edit button - Admin and Pastor only */}
+
+          {canManage && (
+            <Link
+              href={`/dashboard/members/${member.id}/edit`}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <Edit3 size={16} />
+              Edit member
+            </Link>
+          )}
         </div>
 
         {/* Profile header */}
+
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="p-5 sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-center gap-4">
                 {/* Profile Image */}
+
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-lg font-bold text-white shadow-sm">
                   {profileImage ? (
                     <img
@@ -344,6 +385,7 @@ export default function MemberDetailsPage() {
                 </div>
 
                 {/* Name */}
+
                 <div className="min-w-0">
                   <h2
                     title={fullName}
@@ -394,8 +436,10 @@ export default function MemberDetailsPage() {
         </section>
 
         {/* Information */}
+
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Personal information */}
+
           <SectionCard
             icon={UserRound}
             title="Personal Information"
@@ -457,6 +501,7 @@ export default function MemberDetailsPage() {
           </SectionCard>
 
           {/* Church information */}
+
           <SectionCard
             icon={Church}
             title="Church Information"
@@ -506,6 +551,7 @@ export default function MemberDetailsPage() {
         </div>
 
         {/* Account information */}
+
         <SectionCard
           icon={ShieldCheck}
           title="Account Information"
@@ -543,6 +589,7 @@ export default function MemberDetailsPage() {
         </SectionCard>
 
         {/* Bottom navigation */}
+
         <div className="flex items-center justify-between border-t border-slate-200 pt-5">
           <button
             type="button"
@@ -553,13 +600,17 @@ export default function MemberDetailsPage() {
             Back
           </button>
 
-          <Link
-            href={`/dashboard/members/${member.id}/edit`}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            <Edit3 size={16} />
-            Edit member
-          </Link>
+          {/* Edit button - Admin and Pastor only */}
+
+          {canManage && (
+            <Link
+              href={`/dashboard/members/${member.id}/edit`}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              <Edit3 size={16} />
+              Edit member
+            </Link>
+          )}
         </div>
       </div>
     </main>

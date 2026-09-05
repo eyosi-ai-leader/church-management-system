@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getRoleName } from "@/lib/roles";
 import { DashboardOverview } from "@/components/dashboard/overview";
+import ChurchElderDashboard from "@/components/dashboard/elder/ChurchElderDashboard";
 
 export default function RoleBasedDashboard() {
   const [currentDate, setCurrentDate] = useState("");
@@ -115,14 +116,14 @@ function DashboardContent({
         />
       );
 
-    case 3:
-      return (
-        <DashboardOverview
-          currentDate={currentDate}
-          user={user}
-          roleName={roleName}
-        />
-      );
+   case 3:
+  return (
+    <ChurchElderDashboard
+      currentDate={currentDate}
+      user={user}
+      roleName={roleName}
+    />
+  );
 
     case 4:
       return (
