@@ -12,18 +12,18 @@ const memberIdValidator = [
 ];
 
 /**
- * Validate member creation
+ * Validate create member request
  *
- * Creates:
- * - User account
- * - Member profile
+ * Member number is intentionally NOT included.
+ * It is generated automatically by the backend.
  */
 const createMemberValidator = [
-  // Personal information
   body("firstName")
     .trim()
     .notEmpty()
-    .withMessage("First name is required")
+    .withMessage(
+      "First name is required"
+    )
     .isLength({ max: 100 })
     .withMessage(
       "First name must not exceed 100 characters"
@@ -40,7 +40,9 @@ const createMemberValidator = [
   body("lastName")
     .trim()
     .notEmpty()
-    .withMessage("Last name is required")
+    .withMessage(
+      "Last name is required"
+    )
     .isLength({ max: 100 })
     .withMessage(
       "Last name must not exceed 100 characters"
@@ -49,9 +51,13 @@ const createMemberValidator = [
   body("email")
     .trim()
     .notEmpty()
-    .withMessage("Email is required")
+    .withMessage(
+      "Email is required"
+    )
     .isEmail()
-    .withMessage("Please provide a valid email address")
+    .withMessage(
+      "Please provide a valid email address"
+    )
     .isLength({ max: 255 })
     .withMessage(
       "Email must not exceed 255 characters"
@@ -59,13 +65,14 @@ const createMemberValidator = [
 
   body("password")
     .notEmpty()
-    .withMessage("Password is required")
+    .withMessage(
+      "Password is required"
+    )
     .isLength({ min: 6 })
     .withMessage(
       "Password must be at least 6 characters"
     ),
 
-  // Contact information
   body("phone")
     .optional({ nullable: true })
     .trim()
@@ -82,16 +89,6 @@ const createMemberValidator = [
       "Address must not exceed 255 characters"
     ),
 
-  // Church information
-  body("memberNumber")
-    .trim()
-    .notEmpty()
-    .withMessage("Member number is required")
-    .isLength({ max: 30 })
-    .withMessage(
-      "Member number must not exceed 30 characters"
-    ),
-
   body("roleId")
     .isInt({ min: 1, max: 5 })
     .withMessage(
@@ -99,6 +96,7 @@ const createMemberValidator = [
     ),
 
   body("gender")
+    .optional({ nullable: true })
     .isIn(["Male", "Female"])
     .withMessage(
       "Gender must be Male or Female"
@@ -127,7 +125,10 @@ const createMemberValidator = [
 ];
 
 /**
- * Validate member update
+ * Validate update member request
+ *
+ * Member number is intentionally NOT included.
+ * It cannot be changed after creation.
  */
 const updateMemberValidator = [
   ...memberIdValidator,
@@ -176,18 +177,6 @@ const updateMemberValidator = [
       "Email must not exceed 255 characters"
     ),
 
-  body("memberNumber")
-    .optional()
-    .trim()
-    .notEmpty()
-    .withMessage(
-      "Member number cannot be empty"
-    )
-    .isLength({ max: 30 })
-    .withMessage(
-      "Member number must not exceed 30 characters"
-    ),
-
   body("roleId")
     .optional()
     .isInt({ min: 1, max: 5 })
@@ -196,7 +185,7 @@ const updateMemberValidator = [
     ),
 
   body("gender")
-    .optional()
+    .optional({ nullable: true })
     .isIn(["Male", "Female"])
     .withMessage(
       "Gender must be Male or Female"

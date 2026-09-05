@@ -2,14 +2,7 @@ const db = require("../config/db");
 
 /**
  * Create User + Member
- *
- * Both records are created inside one transaction.
- *
- * If either insert fails:
- * - User creation is rolled back
- * - Member creation is rolled back
- *
- * This prevents orphaned user accounts.
+ * Member number is generated automatically.
  */
 const createMember = async ({
   firstName,
@@ -20,21 +13,19 @@ const createMember = async ({
   roleId,
   phone,
   profileImage,
-  memberNumber,
   gender,
   dateOfBirth,
   baptismDate,
   address,
   status,
 }) => {
-  const connection =
-    await db.getConnection();
+  const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
     /**
-     * Create user/account
+     * Create user
      */
     const userQuery = `
       INSERT INTO users (
@@ -50,26 +41,70 @@ const createMember = async ({
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [userResult] =
-      await connection.execute(
-        userQuery,
-        [
-          firstName,
-          middleName || null,
-          lastName,
-          email,
-          password,
-          roleId,
-          phone || null,
-          profileImage || null,
-        ]
-      );
+    const [userResult] = await connection.execute(
+      userQuery,
+      [
+        firstName,
+        middleName || null,
+        lastName,
+        email,
+        password,
+        roleId,
+        phone || null,
+        profileImage || null,
+      ]
+    );
 
-    const userId =
-      userResult.insertId;
+    const userId = userResult.insertId;
 
     /**
-     * Create member/church record
+     * Generate next member number
+     *
+     * Existing formats supported:
+     * MEM-0001
+     * CHMS-2026-0001
+     *
+     * Old/custom values such as 2345 are ignored.
+     */
+    const sequenceQuery = `
+      SELECT
+        MAX(
+          CASE
+            WHEN member_number REGEXP '^CHMS-[0-9]{4}-[0-9]+$'
+              THEN CAST(SUBSTRING_INDEX(member_number, '-', -1) AS UNSIGNED)
+
+            WHEN member_number REGEXP '^MEM-[0-9]+$'
+              THEN CAST(SUBSTRING(member_number, 5) AS UNSIGNED)
+
+            ELSE 0
+          END
+        ) AS max_sequence
+      FROM members
+    `;
+
+    const [sequenceRows] =
+      await connection.execute(
+        sequenceQuery
+      );
+
+    const maxSequence =
+      Number(
+        sequenceRows[0]?.max_sequence || 0
+      );
+
+    const nextSequence =
+      maxSequence + 1;
+
+    const currentYear =
+      new Date().getFullYear();
+
+    const memberNumber =
+      `CHMS-${currentYear}-${String(
+        nextSequence
+      ).padStart(4, "0")}`;
+
+    /**
+     * Create member
      */
     const memberQuery = `
       INSERT INTO members (
@@ -100,22 +135,15 @@ const createMember = async ({
         ]
       );
 
-    /**
-     * Commit both records
-     */
     await connection.commit();
 
     return {
       userId,
       memberId: memberResult.insertId,
+      memberNumber,
     };
   } catch (error) {
-    /**
-     * Roll back everything if
-     * any database operation fails.
-     */
     await connection.rollback();
-
     throw error;
   } finally {
     connection.release();
@@ -125,9 +153,7 @@ const createMember = async ({
 /**
  * Get member by ID
  */
-const getMemberById = async (
-  memberId
-) => {
+const getMemberById = async (memberId) => {
   const query = `
     SELECT
       m.id,
@@ -168,11 +194,10 @@ const getMemberById = async (
     LIMIT 1
   `;
 
-  const [rows] =
-    await db.execute(
-      query,
-      [memberId]
-    );
+  const [rows] = await db.execute(
+    query,
+    [memberId]
+  );
 
   return rows[0] || null;
 };
@@ -180,27 +205,8 @@ const getMemberById = async (
 /**
  * Update member
  *
- * Updates:
- *
- * users:
- * - first_name
- * - middle_name
- * - last_name
- * - email
- * - role_id
- * - phone
- *
- * members:
- * - member_number
- * - gender
- * - phone
- * - date_of_birth
- * - baptism_date
- * - address
- * - status
- *
- * Both tables are updated inside
- * one transaction.
+ * Member number is NOT updated.
+ * It is a permanent system-generated identity.
  */
 const updateMember = async (
   memberId,
@@ -212,7 +218,6 @@ const updateMember = async (
     email,
     roleId,
     phone,
-    memberNumber,
     gender,
     dateOfBirth,
     baptismDate,
@@ -220,14 +225,13 @@ const updateMember = async (
     status,
   }
 ) => {
-  const connection =
-    await db.getConnection();
+  const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
     /**
-     * Update user/account information
+     * Update user
      */
     const userQuery = `
       UPDATE users
@@ -256,12 +260,13 @@ const updateMember = async (
     );
 
     /**
-     * Update member/church information
+     * Update member
+     *
+     * member_number intentionally excluded.
      */
     const memberQuery = `
       UPDATE members
       SET
-        member_number = ?,
         gender = ?,
         phone = ?,
         date_of_birth = ?,
@@ -276,13 +281,12 @@ const updateMember = async (
       await connection.execute(
         memberQuery,
         [
-          memberNumber,
           gender || null,
           phone || null,
           dateOfBirth || null,
           baptismDate || null,
           address || null,
-          status,
+          status || "Active",
           memberId,
         ]
       );
@@ -292,7 +296,6 @@ const updateMember = async (
     return result;
   } catch (error) {
     await connection.rollback();
-
     throw error;
   } finally {
     connection.release();
@@ -301,12 +304,8 @@ const updateMember = async (
 
 /**
  * Delete member
- *
- * Currently deletes the member record only.
  */
-const deleteMember = async (
-  memberId
-) => {
+const deleteMember = async (memberId) => {
   const query = `
     DELETE FROM members
     WHERE id = ?
@@ -322,13 +321,7 @@ const deleteMember = async (
 };
 
 /**
- * Get all members with:
- *
- * - Pagination
- * - Search
- * - Status filter
- * - Role filter
- * - Sorting
+ * Get all members
  */
 const getAllMembers = async (
   limit,
@@ -393,8 +386,7 @@ const getAllMembers = async (
       )
     `);
 
-    const searchTerm =
-      `%${search}%`;
+    const searchTerm = `%${search}%`;
 
     queryParams.push(
       searchTerm,
@@ -407,7 +399,7 @@ const getAllMembers = async (
   }
 
   /**
-   * Status filter
+   * Status
    */
   if (status) {
     conditions.push(
@@ -418,7 +410,7 @@ const getAllMembers = async (
   }
 
   /**
-   * Role filter
+   * Role
    */
   if (roleId) {
     conditions.push(
@@ -433,22 +425,17 @@ const getAllMembers = async (
    */
   if (conditions.length > 0) {
     query += `
-      WHERE ${conditions.join(
-        " AND "
-      )}
+      WHERE ${conditions.join(" AND ")}
     `;
   }
 
   /**
-   * Allowed sorting fields
-   *
-   * Whitelist prevents SQL injection.
+   * Sorting whitelist
    */
   const allowedSortFields = {
     first_name: "u.first_name",
     last_name: "u.last_name",
-    member_number:
-      "m.member_number",
+    member_number: "m.member_number",
     email: "u.email",
     created_at: "m.created_at",
   };
@@ -458,14 +445,10 @@ const getAllMembers = async (
     allowedSortFields.created_at;
 
   const sortDirection =
-    sortOrder.toLowerCase() ===
-    "desc"
+    sortOrder.toLowerCase() === "desc"
       ? "DESC"
       : "ASC";
 
-  /**
-   * Sorting + pagination
-   */
   query += `
     ORDER BY ${sortColumn} ${sortDirection}
     LIMIT ? OFFSET ?
@@ -520,8 +503,7 @@ const countMembers = async (
       )
     `);
 
-    const searchTerm =
-      `%${search}%`;
+    const searchTerm = `%${search}%`;
 
     queryParams.push(
       searchTerm,
@@ -560,9 +542,7 @@ const countMembers = async (
    */
   if (conditions.length > 0) {
     query += `
-      WHERE ${conditions.join(
-        " AND "
-      )}
+      WHERE ${conditions.join(" AND ")}
     `;
   }
 
@@ -573,7 +553,7 @@ const countMembers = async (
     );
 
   return Number(
-    rows[0].total
+    rows[0]?.total || 0
   );
 };
 

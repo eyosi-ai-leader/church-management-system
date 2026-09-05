@@ -9,6 +9,9 @@ const memberModel = require("../models/memberModel");
  * - Member profile
  *
  * Password is hashed before it reaches the model.
+ *
+ * Member number is generated automatically
+ * by the member model.
  */
 const createMember = async (memberData) => {
   try {
@@ -80,13 +83,15 @@ const getMemberById = async (memberId) => {
  * - role_id
  *
  * members:
- * - member_number
  * - gender
  * - phone
  * - date_of_birth
  * - baptism_date
  * - address
  * - status
+ *
+ * Member number is NOT updated because it is
+ * a permanent system-generated identity.
  */
 const updateMember = async (
   memberId,
@@ -140,11 +145,6 @@ const updateMember = async (
             existingMember.user_phone ??
             existingMember.phone
           ),
-
-    memberNumber:
-      memberData.memberNumber !== undefined
-        ? memberData.memberNumber
-        : existingMember.member_number,
 
     gender:
       memberData.gender !== undefined

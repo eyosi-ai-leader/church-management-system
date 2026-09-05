@@ -24,7 +24,6 @@ const initialForm = {
   dateOfBirth: "",
   baptismDate: "",
   address: "",
-  memberNumber: "",
   roleId: "5",
   status: "Active",
   password: "",
@@ -115,11 +114,6 @@ export default function CreateMemberForm() {
         "Password must contain at least 6 characters.";
     }
 
-    if (!form.memberNumber.trim()) {
-      nextErrors.memberNumber =
-        "Member number is required.";
-    }
-
     if (!form.gender) {
       nextErrors.gender =
         "Gender is required.";
@@ -186,9 +180,6 @@ export default function CreateMemberForm() {
         address:
           form.address.trim() ||
           undefined,
-
-        memberNumber:
-          form.memberNumber.trim(),
 
         roleId:
           Number(form.roleId),

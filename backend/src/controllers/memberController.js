@@ -13,6 +13,10 @@ const {
  * - Member record
  *
  * Both are handled by the member service.
+ *
+ * Member number is generated automatically
+ * by the member model and cannot be provided
+ * manually by the client.
  */
 const createMember = async (req, res) => {
   try {
@@ -24,7 +28,6 @@ const createMember = async (req, res) => {
       phone,
       password,
       roleId,
-      memberNumber,
       gender,
       dateOfBirth,
       baptismDate,
@@ -151,20 +154,6 @@ const createMember = async (req, res) => {
     }
 
     /**
-     * Validate member number
-     */
-    if (
-      typeof memberNumber !== "string" ||
-      !memberNumber.trim()
-    ) {
-      return errorResponse(
-        res,
-        "Member number is required",
-        400
-      );
-    }
-
-    /**
      * Validate gender when provided
      */
     if (
@@ -200,6 +189,9 @@ const createMember = async (req, res) => {
 
     /**
      * Create user + member
+     *
+     * Member number is generated automatically
+     * inside the member model.
      */
     const result =
       await memberService.createMember({
@@ -225,9 +217,6 @@ const createMember = async (req, res) => {
         password,
 
         roleId: Number(roleId),
-
-        memberNumber:
-          memberNumber.trim(),
 
         gender:
           gender !== undefined &&
@@ -261,6 +250,7 @@ const createMember = async (req, res) => {
       {
         memberId: result.memberId,
         userId: result.userId,
+        memberNumber: result.memberNumber,
       },
       201
     );
@@ -317,6 +307,9 @@ const getMemberById = async (req, res) => {
  * - Personal information
  * - Church information
  * - Account role
+ *
+ * Member number is intentionally excluded because
+ * it is a permanent system-generated identity.
  */
 const updateMember = async (req, res) => {
   try {
@@ -329,7 +322,6 @@ const updateMember = async (req, res) => {
       email,
       phone,
       roleId,
-      memberNumber,
       gender,
       dateOfBirth,
       baptismDate,
@@ -464,23 +456,6 @@ const updateMember = async (req, res) => {
     }
 
     /**
-     * Validate member number
-     */
-    if (
-      memberNumber !== undefined &&
-      (
-        typeof memberNumber !== "string" ||
-        !memberNumber.trim()
-      )
-    ) {
-      return errorResponse(
-        res,
-        "Member number cannot be empty",
-        400
-      );
-    }
-
-    /**
      * Validate email format
      */
     if (
@@ -501,6 +476,8 @@ const updateMember = async (req, res) => {
 
     /**
      * Update member
+     *
+     * Member number is not accepted or changed.
      */
     await memberService.updateMember(
       id,
@@ -538,11 +515,6 @@ const updateMember = async (req, res) => {
         roleId:
           roleId !== undefined
             ? Number(roleId)
-            : undefined,
-
-        memberNumber:
-          memberNumber !== undefined
-            ? memberNumber.trim()
             : undefined,
 
         gender,

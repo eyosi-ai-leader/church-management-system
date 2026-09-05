@@ -19,21 +19,6 @@ export default function MemberChurchInfo({
       <div className="grid gap-5 md:grid-cols-2">
         <div>
           <label className="mb-2 block text-sm font-medium text-slate-700">
-            Member number
-          </label>
-
-          <input
-            type="text"
-            name="memberNumber"
-            value={form.memberNumber}
-            onChange={onChange}
-            placeholder="MEM-0022"
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
             Role
           </label>
 
@@ -62,7 +47,7 @@ export default function MemberChurchInfo({
             name="baptismDate"
             value={form.baptismDate}
             onChange={onChange}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
           />
         </div>
 
