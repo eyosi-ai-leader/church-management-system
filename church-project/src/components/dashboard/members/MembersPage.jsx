@@ -318,35 +318,27 @@ async function handleStatusConfirm(member, status) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => loadMembers(true)}
-            disabled={refreshing}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <RefreshCw
-              size={16}
-              className={
-                refreshing
-                  ? "animate-spin"
-                  : ""
-              }
-            />
+  <button
+    type="button"
+    onClick={() => window.location.reload()}
+    className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+  >
+    <RefreshCw size={16} />
 
-            <span className="hidden sm:inline">
-              Refresh
-            </span>
-          </button>
+    <span className="hidden sm:inline">
+      Refresh
+    </span>
+  </button>
 
-          <Link
-            href="/dashboard/members/create"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-          >
-            <Plus size={17} />
+  <Link
+    href="/dashboard/members/create"
+    className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+  >
+    <Plus size={17} />
 
-            <span>Add member</span>
-          </Link>
-        </div>
+    <span>Add member</span>
+  </Link>
+</div>
       </div>
 
       {/* Summary */}
