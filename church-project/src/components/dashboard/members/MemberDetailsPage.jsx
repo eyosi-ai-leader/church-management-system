@@ -32,7 +32,11 @@ function getRoleName(member) {
     case 5:
       return "Member";
     default:
-      return member?.role_name || member?.roleName || "Member";
+      return (
+        member?.role_name ||
+        member?.roleName ||
+        "Member"
+      );
   }
 }
 
@@ -60,17 +64,20 @@ function formatDate(date) {
 
 function InfoItem({ icon: Icon, label, value }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+    <div className="flex min-w-0 gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
         <Icon size={16} />
       </div>
 
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm font-medium text-slate-700">
+        <p
+          title={value || ""}
+          className="mt-1 break-words text-sm font-medium text-slate-700"
+        >
           {value || "Not provided"}
         </p>
       </div>
@@ -78,7 +85,12 @@ function InfoItem({ icon: Icon, label, value }) {
   );
 }
 
-function SectionCard({ icon: Icon, title, description, children }) {
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
@@ -87,7 +99,7 @@ function SectionCard({ icon: Icon, title, description, children }) {
             <Icon size={17} />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <h2 className="text-sm font-bold text-slate-900">
               {title}
             </h2>
@@ -114,7 +126,7 @@ function LoadingPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="p-6">
           <div className="flex animate-pulse items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-slate-100" />
+            <div className="h-16 w-16 rounded-full bg-slate-100" />
 
             <div className="space-y-2">
               <div className="h-5 w-48 rounded bg-slate-100" />
@@ -160,7 +172,10 @@ export default function MemberDetailsPage() {
           return;
         }
 
-        const memberData = result?.data || result?.member || result;
+        const memberData =
+          result?.data ||
+          result?.member ||
+          result;
 
         setMember(memberData);
       } catch (err) {
@@ -233,27 +248,39 @@ export default function MemberDetailsPage() {
   }
 
   const firstName =
-    member.first_name ||
-    member.firstName ||
+    member.first_name ??
+    member.firstName ??
+    "";
+
+  const middleName =
+    member.middle_name ??
+    member.middleName ??
     "";
 
   const lastName =
-    member.last_name ||
-    member.lastName ||
+    member.last_name ??
+    member.lastName ??
     "";
 
   const fullName =
-    `${firstName} ${lastName}`.trim() ||
-    "Unnamed member";
+    [firstName, middleName, lastName]
+      .filter(Boolean)
+      .join(" ") || "Unnamed member";
 
   const initials = getInitials(
     firstName,
     lastName
   );
 
+  const profileImage =
+    member.profile_image ??
+    member.profileImage ??
+    null;
+
   const role = getRoleName(member);
 
-  const status = member.status || "Inactive";
+  const status =
+    member.status || "Inactive";
 
   const phone =
     member.phone ||
@@ -265,7 +292,7 @@ export default function MemberDetailsPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <Link
               href="/dashboard/members"
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
@@ -289,7 +316,7 @@ export default function MemberDetailsPage() {
 
           <Link
             href={`/dashboard/members/${member.id}/edit`}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
           >
             <Edit3 size={16} />
             Edit member
@@ -300,19 +327,36 @@ export default function MemberDetailsPage() {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="p-5 sm:p-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-lg font-bold text-white shadow-sm">
-                  {initials || <UserRound size={24} />}
+              <div className="flex min-w-0 items-center gap-4">
+                {/* Profile Image */}
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-lg font-bold text-white shadow-sm">
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt={fullName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials || (
+                      <UserRound size={24} />
+                    )
+                  )}
                 </div>
 
+                {/* Name */}
                 <div className="min-w-0">
-                  <h2 className="truncate text-xl font-bold text-slate-900">
+                  <h2
+                    title={fullName}
+                    className="truncate text-xl font-bold text-slate-900"
+                  >
                     {fullName}
                   </h2>
 
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-slate-400">
-                      {member.member_number || "No member number"}
+                    <span className="max-w-[220px] truncate font-mono text-xs font-semibold text-slate-400">
+                      {member.member_number ||
+                        member.memberNumber ||
+                        "No member number"}
                     </span>
 
                     <span className="text-slate-300">
@@ -366,6 +410,12 @@ export default function MemberDetailsPage() {
 
               <InfoItem
                 icon={UserRound}
+                label="Middle name"
+                value={middleName}
+              />
+
+              <InfoItem
+                icon={UserRound}
                 label="Last name"
                 value={lastName}
               />
@@ -379,7 +429,9 @@ export default function MemberDetailsPage() {
               <InfoItem
                 icon={CalendarDays}
                 label="Date of birth"
-                value={formatDate(member.date_of_birth)}
+                value={formatDate(
+                  member.date_of_birth
+                )}
               />
 
               <InfoItem
@@ -420,19 +472,26 @@ export default function MemberDetailsPage() {
               <InfoItem
                 icon={UsersRound}
                 label="Member number"
-                value={member.member_number}
+                value={
+                  member.member_number ||
+                  member.memberNumber
+                }
               />
 
               <InfoItem
                 icon={CalendarDays}
                 label="Baptism date"
-                value={formatDate(member.baptism_date)}
+                value={formatDate(
+                  member.baptism_date
+                )}
               />
 
               <InfoItem
                 icon={Clock3}
                 label="Joined"
-                value={formatDate(member.created_at)}
+                value={formatDate(
+                  member.created_at
+                )}
               />
             </div>
 
@@ -468,13 +527,17 @@ export default function MemberDetailsPage() {
             <InfoItem
               icon={Clock3}
               label="Created"
-              value={formatDate(member.created_at)}
+              value={formatDate(
+                member.created_at
+              )}
             />
 
             <InfoItem
               icon={Clock3}
               label="Last updated"
-              value={formatDate(member.updated_at)}
+              value={formatDate(
+                member.updated_at
+              )}
             />
           </div>
         </SectionCard>
