@@ -51,14 +51,14 @@ const createMember = async (
      * Profile image URL is stored
      * in the users table.
      */
-    const result =
-      await memberModel.createMember({
-        ...memberData,
-
-        profileImage:
-          uploadedImage?.secureUrl ||
-          null,
-      });
+   const result =
+  await memberModel.createMember({
+    ...memberData,
+    password: hashedPassword,
+    profileImage:
+      uploadedImage?.secureUrl ||
+      null,
+  });
 
     return result;
   } catch (error) {
