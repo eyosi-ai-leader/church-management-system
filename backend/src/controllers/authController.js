@@ -23,17 +23,30 @@ const register = async (req, res) => {
       );
     }
 
-    const result = await registerUser(req.body);
+    const result =
+      await registerUser(
+        req.body,
+        req.file || null
+      );
 
-    return successResponse(res, result.message, result.user);
+    return successResponse(
+      res,
+      result.message,
+      result.user
+    );
   } catch (error) {
-    return errorResponse(res, error.message);
+    return errorResponse(
+      res,
+      error.message,
+      error.statusCode || 500
+    );
   }
 };
 
 const login = async (req, res) => {
   try {
-    const errors = validationResult(req);
+    const errors =
+      validationResult(req);
 
     if (!errors.isEmpty()) {
       return errorResponse(
@@ -42,18 +55,25 @@ const login = async (req, res) => {
         400,
         errors.array()
       );
-    }  
-    
-const result = await loginUser(req.body);
+    }
 
-return successResponse(res, result.message, {
-  user: result.user,
-  token: result.token,
-});
+    const result =
+      await loginUser(req.body);
 
-
+    return successResponse(
+      res,
+      result.message,
+      {
+        user: result.user,
+        token: result.token,
+      }
+    );
   } catch (error) {
-    return errorResponse(res, error.message);
+    return errorResponse(
+      res,
+      error.message,
+      error.statusCode || 500
+    );
   }
 };
 

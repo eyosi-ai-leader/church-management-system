@@ -1,80 +1,121 @@
 const {
   findUserByEmail,
-  createUser,
 } = require("../models/userModel");
 
-const {
-  hashPassword,
-  comparePassword,
-} = require("../utils/password");
+const memberService = require("./memberService");
 
-const { generateToken } = require("../utils/jwt");
-
-// Register User
-const registerUser = async (userData) => {
+/**
+ * Register a new public church member.
+ *
+ * Public registration rules:
+ * - roleId is ALWAYS 5 (Member)
+ * - status is ALWAYS Active
+ * - password is hashed inside memberService
+ * - profile image is handled by memberService
+ * - users + members are created together
+ */
+const registerUser = async (
+  userData,
+  profileImage = null
+) => {
   const {
     firstName,
+    middleName,
     lastName,
     email,
     password,
+    phone,
+    gender,
+    dateOfBirth,
+    baptismDate,
+    address,
   } = userData;
 
-  // Check if email already exists
-  const existingUser = await findUserByEmail(email);
+  const existingUser =
+    await findUserByEmail(email);
 
   if (existingUser) {
-    throw new Error("Email already exists");
+    const error = new Error(
+      "Email already exists."
+    );
+
+    error.statusCode = 409;
+
+    throw error;
   }
 
-  // Hash password
-  const hashedPassword = await hashPassword(password);
+  const result =
+    await memberService.createMember(
+      {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        password,
 
-  // Default role = Member
-  const roleId = 5;
+        // Public users can NEVER choose these.
+        roleId: 5,
+        status: "Active",
 
-  // Save user
-  const userId = await createUser({
-    firstName,
-    lastName,
-    email,
-    password: hashedPassword,
-    roleId,
-  });
+        phone,
+        gender,
+        dateOfBirth,
+        baptismDate,
+        address,
+      },
+      profileImage
+    );
 
   return {
-    message: "User registered successfully",
+    message:
+      "Registration successful. Your member account has been created.",
     user: {
-      id: userId,
       firstName,
+      middleName: middleName || null,
       lastName,
       email,
+      roleId: 5,
       role: "Member",
+      status: "Active",
+      memberId: result.memberId,
+      memberNumber: result.memberNumber,
     },
   };
 };
 
-// Login User
 const loginUser = async (userData) => {
-  const { email, password } = userData;
+  const {
+    email,
+    password,
+  } = userData;
 
-  // Find user
-  const user = await findUserByEmail(email);
+  const user =
+    await findUserByEmail(email);
 
   if (!user) {
-    throw new Error("Invalid email or password");
+    throw new Error(
+      "Invalid email or password"
+    );
   }
 
-  // Compare password
-  const isPasswordValid = await comparePassword(
-    password,
-    user.password
-  );
+  const bcrypt = require("bcrypt");
+
+  const isPasswordValid =
+    await bcrypt.compare(
+      password,
+      user.password
+    );
 
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw new Error(
+      "Invalid email or password"
+    );
   }
 
-  // Generate JWT
+  const {
+    generateToken,
+  } = require("../utils/jwt");
+
   const token = generateToken({
     id: user.id,
     roleId: user.role_id,
@@ -86,6 +127,7 @@ const loginUser = async (userData) => {
     user: {
       id: user.id,
       firstName: user.first_name,
+      middleName: user.middle_name,
       lastName: user.last_name,
       email: user.email,
       roleId: user.role_id,
