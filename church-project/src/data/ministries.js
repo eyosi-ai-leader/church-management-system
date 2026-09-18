@@ -5,7 +5,7 @@ export const ministries = [
     title: "Family Ministry",
     category: "Family",
 
-    image: "/images/ministries/fares-leaders.jpg",
+    image: "/images/ministries/Fares-Church.jpg",
 
     shortDescription:
       "Strengthening marriages, supporting parents, and helping families grow together in Christ.",
@@ -34,7 +34,7 @@ export const ministries = [
     leader: {
       name: "Family Ministry Leader",
       role: "Ministry Coordinator",
-      image: "/images/ministries/Fares-pray.jpg",
+      image: "/images/ministries/Fares-Church.jpg",
       bio:
         "Our family ministry leader helps families grow spiritually and build stronger relationships."
     },
@@ -53,7 +53,7 @@ export const ministries = [
     title: "Worship Ministry",
     category: "Worship",
 
-    image: "/images/ministries/fares-Leaders.jpg",
+    image: "/images/ministries/Fares-Church.jpg",
 
     shortDescription:
       "Creating meaningful worship experiences that connect people with God through music and service.",
@@ -82,7 +82,7 @@ export const ministries = [
     leader: {
       name: "Worship Leader",
       role: "Worship Coordinator",
-      image: "/images/ministries/Fares-meeting.jpg",
+      image: "/images/ministries/Fares-Church.jpg",
       bio:
         "Leading the worship team with passion and commitment."
     },
@@ -101,7 +101,7 @@ export const ministries = [
     title: "Youth Ministry",
     category: "Youth",
 
-    image: "/images/ministries/fares-family.jpg",
+    image: "/images/ministries/Fares-Meeting.jpg",
 
     shortDescription:
       "Helping young people grow in faith, purpose, and relationships.",
@@ -129,7 +129,7 @@ export const ministries = [
     leader: {
       name: "Youth Leader",
       role: "Youth Coordinator",
-      image: "/images/ministries/Fares-Family.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       bio:
         "Supporting young people in their spiritual journey."
     },
@@ -148,7 +148,7 @@ export const ministries = [
     title: "Children Ministry",
     category: "Kids",
 
-    image: "/images/ministries/fares-Church.jpg",
+    image: "/images/ministries/Fares-Meeting.jpg",
 
     shortDescription:
       "Helping children discover God's love through engaging lessons and activities.",
@@ -176,7 +176,7 @@ export const ministries = [
     leader: {
       name: "Children Leader",
       role: "Children Coordinator",
-      image: "/images/ministries/Fares-Church.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       bio:
         "Helping children grow in faith."
     },
@@ -195,7 +195,7 @@ export const ministries = [
     title: "Media Ministry",
     category: "Technology",
 
-    image: "/images/ministries/fares-family.jpg",
+    image: "/images/ministries/Fares-Meeting.jpg",
 
     shortDescription:
       "Supporting church communication through photography, video, livestream, and technology.",
@@ -224,7 +224,7 @@ export const ministries = [
     leader: {
       name: "Media Leader",
       role: "Media Coordinator",
-      image: "/images/ministries/Fares-family.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       bio:
         "Managing church media and communication."
     },
@@ -242,7 +242,7 @@ export const ministries = [
   title: "Outreach Ministry",
   category: "Community",
 
-  image: "/images/ministries/fares-meeting.jpg",
+  image: "/images/ministries/Fares-Meeting.jpg",
 
   shortDescription:
     "Serving our community with compassion, hope, and practical support for those in need.",
@@ -271,14 +271,14 @@ export const ministries = [
   leader: {
     name: "Outreach Leader",
     role: "Outreach Coordinator",
-    image: "/images/ministries/Fares-Leaders.jpg",
+    image: "/images/ministries/Fares-Meeting.jpg",
     bio:
-      "Leading outreach activities and community service programs."
+      "Leading Outreach activities and community service programs."
   },
 
   requirements: [
     "Heart to serve others",
-    "Commitment to outreach activities",
+    "Commitment to Outreach activities",
     "Teamwork"
   ]
 }, 

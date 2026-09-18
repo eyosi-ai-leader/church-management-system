@@ -9,7 +9,7 @@ export const events = [
     location: "Main Church Campus",
     description:
       "Join our church family for an inspiring evening of worship, prayer, and fellowship.",
-    image: "/images/events/Fares-Pray.jpg",
+    image: "/images/events/Fares-Family.jpg",
     featured: true,
   },
 ];

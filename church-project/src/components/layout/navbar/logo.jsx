@@ -10,7 +10,7 @@ const Logo = () => {
     >
       <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-ink">
         <Image
-          src="/images/Fares-logo.jpg"
+          src="/images/Fares-Logo.jpg"
           alt="Church Logo"
           width={36}
           height={36}

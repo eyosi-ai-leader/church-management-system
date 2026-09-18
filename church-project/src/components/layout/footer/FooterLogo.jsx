@@ -16,7 +16,7 @@ export default function FooterLogo() {
 
 
         <h2 className="text-xl font-bold">
-          Fares International Church
+          Fares church 
         </h2>
 
       </div>

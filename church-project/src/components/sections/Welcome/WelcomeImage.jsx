@@ -12,7 +12,7 @@ export default function WelcomeImage() {
       {/* Main Image */}
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-2xl">
         <Image
-          src="/images/welcome/Fares-church.jpg"
+          src="/images/about/Fares-Pray-2.jpg"
           alt="Church members worshipping together"
           fill
           sizes="(max-width:1024px)100vw,50vw"

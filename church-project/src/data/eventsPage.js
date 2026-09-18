@@ -36,7 +36,7 @@ export const eventsPage = {
         "Join our church family for a powerful evening of worship, prayer, and fellowship. Come expecting a meaningful encounter with God and a welcoming community.",
 
       image:
-        "/images/events/Fares-Pray.jpg",
+        "/images/events/Fares-Family.jpg",
     },
 
     {

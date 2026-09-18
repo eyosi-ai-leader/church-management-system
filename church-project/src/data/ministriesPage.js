@@ -3,7 +3,7 @@ const ministriesPage = {
     title: "Our Ministries",
     description:
       "God has uniquely gifted every person to serve. Explore our ministries, discover where you belong, and become part of a Christ-centered community making a difference together.",
-    image: "/images/ministries/fares-Church.jpg",
+    image: "/images/ministries/Fares-Pray.jpg",
     breadcrumb: [
       {
         label: "Home",
@@ -29,7 +29,7 @@ const ministriesPage = {
       id: 1,
       slug: "outreach",
       title: "Outreach Ministry",
-      image: "/images/ministries/fares-family.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       shortDescription:
         "Share God's love by serving local communities through evangelism, missions, and outreach programs.",
     },
@@ -37,7 +37,7 @@ const ministriesPage = {
       id: 2,
       slug: "worship",
       title: "Worship Ministry",
-      image: "/images/ministries/fares-leaders.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       shortDescription:
         "Lead the congregation in worship through music, praise, and creative arts that glorify God.",
     },
@@ -53,7 +53,7 @@ const ministriesPage = {
       id: 4,
       slug: "youth",
       title: "Youth Ministry",
-      image: "/images/ministries/fares-meeting.jpg",
+      image: "/images/ministries/Fares-Pray.jpg",
       shortDescription:
         "Helping young people know Christ, build friendships, and grow into strong Christian leaders.",
     },
@@ -61,7 +61,7 @@ const ministriesPage = {
       id: 5,
       slug: "children",
       title: "Children Ministry",
-      image: "/images/ministries/fares-Church.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       shortDescription:
         "Creating a safe and engaging environment where children can learn about Jesus and grow in faith.",
     },
@@ -69,7 +69,7 @@ const ministriesPage = {
       id: 6,
       slug: "media",
       title: "Media Ministry",
-      image: "/images/ministries/fares-family.jpg",
+      image: "/images/ministries/Fares-Meeting.jpg",
       shortDescription:
         "Supporting worship and church communication through photography, video, livestream, and technology.",
     },
@@ -77,7 +77,7 @@ const ministriesPage = {
       id: 7,
       slug: "family",
       title: "Family Ministry",
-      image: "/images/ministries/fares-leaders.jpg",
+      image: "/images/ministries/Fares-Pray.jpg",
       shortDescription:
         "Strengthening marriages, supporting parents, and helping families grow together in Christ.",
     },

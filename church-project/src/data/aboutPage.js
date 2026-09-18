@@ -3,7 +3,7 @@ const aboutPage = {
     title: "About Our Church",
     description:
       "Growing together in faith, sharing the love of Christ, and serving our community with purpose, compassion, and hope.",
-    image: "/images/about/fares-pray-2.jpg",
+    image: "/images/about/Fares-Pray-3.jpg",
     breadcrumb: [
       {
         label: "Home",
@@ -22,7 +22,7 @@ const aboutPage = {
       "Our church exists to help people know Jesus, grow in their faith, and live out God's purpose in their daily lives. We are committed to creating a welcoming environment where everyone can encounter God's love and build meaningful relationships.",
       "Through worship, biblical teaching, prayer, discipleship, and community outreach, we strive to make a lasting impact both locally and globally while raising the next generation of faithful followers of Christ.",
     ],
-    image: "/images/about/fares-pray-3.jpg",
+    image: "/images/about/Fares-Pray-3.jpg",
 
     stats: [
       {
@@ -66,17 +66,17 @@ const aboutPage = {
   ],
 
   pastor: {
-    name: "Pastor Daniel Smith",
+    name: "Pastor Aberham ",
     role: "Lead Pastor",
-    image: "/images/about/Fares-paster.jpg",
+    image: "/images/about/Fares-Paster.jpg",
     message:
       "Whether you are exploring faith for the first time or looking for a church family, we want you to know that you are always welcome here. Our prayer is that you will experience God's presence, discover authentic community, and grow in your relationship with Jesus.",
-    signature: "Pastor Daniel Smith",
+    signature: "Pastor Aberham ",
   },
 
   timeline: [
     {
-      year: "2004",
+      year: "1980",
       title: "Church Founded",
       description:
         "Our church began with a small group of believers passionate about sharing the Gospel.",
@@ -107,19 +107,19 @@ const aboutPage = {
       "Our pastoral team is committed to serving with humility, wisdom, and a heart for people.",
     members: [
       {
-        name: "Pastor Daniel Smith",
+        name: "Pastor Aberham ",
         role: "Lead Pastor",
-        image: "/images/about/fares-paster.jpg",
+        image: "/images/about/Fares-Paster.jpg",
       },
       {
-        name: "Sarah Johnson",
+        name: "Pastor Aberham ",
         role: "Executive Pastor",
-        image: "/images/about/fares-paster.jpg",
+        image: "/images/about/Fares-Paster.jpg",
       },
       {
-        name: "Michael Brown",
+        name: "Pastor Aberham ",
         role: "Youth Pastor",
-        image: "/images/about/fares-paster.jpg",
+        image: "/images/about/Fares-Paster.jpg",
       },
     ],
   },
