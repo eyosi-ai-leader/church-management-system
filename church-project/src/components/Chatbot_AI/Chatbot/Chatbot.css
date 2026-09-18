@@ -1,0 +1,1040 @@
+/* =========================================================
+   FARE CHURCH AI CHATBOT
+   Modern 2026 UI
+   ========================================================= */
+
+
+/* =========================================================
+   CHATBOT CONTAINER
+   ========================================================= */
+
+.container {
+  position: relative;
+  z-index: 9999;
+}
+
+
+/* =========================================================
+   TOGGLER BUTTON
+   ========================================================= */
+
+#chatbot-toggler {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+
+  width: 56px;
+  height: 56px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  margin: 0;
+
+  border: 0;
+  outline: none;
+
+  border-radius: 50%;
+
+  background: #0d6efd;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 4px 12px rgba(13, 110, 253, 0.25),
+    0 12px 30px rgba(15, 23, 42, 0.18);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+
+/* Hover */
+
+#chatbot-toggler:hover {
+  background: #0b5ed7;
+
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 6px 16px rgba(13, 110, 253, 0.3),
+    0 16px 34px rgba(15, 23, 42, 0.2);
+}
+
+
+/* Active */
+
+#chatbot-toggler:active {
+  transform: scale(0.94);
+}
+
+
+/* =========================================================
+   TOGGLER ICONS
+   ========================================================= */
+
+/*
+  IMPORTANT:
+  Your JSX contains:
+
+  mode_comment
+  close
+
+  Instead of relying on the Material Symbols font,
+  we hide the text and create the icons with CSS.
+*/
+
+
+#chatbot-toggler span {
+  position: absolute;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  color: transparent;
+
+  font-size: 0;
+
+  pointer-events: none;
+
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s ease;
+}
+
+
+/* Chat bubble icon */
+
+#chatbot-toggler span:first-child::before {
+  content: "";
+
+  width: 21px;
+  height: 17px;
+
+  border: 2.2px solid #ffffff;
+
+  border-radius: 7px;
+
+  position: relative;
+}
+
+
+/* Chat bubble tail */
+
+#chatbot-toggler span:first-child::after {
+  content: "";
+
+  position: absolute;
+
+  width: 7px;
+  height: 7px;
+
+  left: calc(50% + 5px);
+  top: calc(50% + 6px);
+
+  border-left: 2.2px solid #ffffff;
+  border-bottom: 2.2px solid #ffffff;
+
+  transform: skew(-20deg);
+}
+
+
+/* Close icon */
+
+#chatbot-toggler span:last-child::before,
+#chatbot-toggler span:last-child::after {
+  content: "";
+
+  position: absolute;
+
+  width: 23px;
+  height: 2.2px;
+
+  border-radius: 999px;
+
+  background: #ffffff;
+}
+
+
+/* Create X */
+
+#chatbot-toggler span:last-child::before {
+  transform: rotate(45deg);
+}
+
+#chatbot-toggler span:last-child::after {
+  transform: rotate(-45deg);
+}
+
+
+/* Default state */
+
+#chatbot-toggler span:first-child {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#chatbot-toggler span:last-child {
+  opacity: 0;
+  transform: scale(0.7) rotate(-45deg);
+}
+
+
+/* Open state */
+
+.container.show-chatbot #chatbot-toggler {
+  transform: rotate(90deg);
+}
+
+.container.show-chatbot #chatbot-toggler:hover {
+  transform: rotate(90deg) translateY(-2px);
+}
+
+.container.show-chatbot #chatbot-toggler span:first-child {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.container.show-chatbot #chatbot-toggler span:last-child {
+  opacity: 1;
+  transform: scale(1) rotate(-45deg);
+}
+
+
+/* =========================================================
+   CHATBOT POPUP
+   ========================================================= */
+
+.chatbot-popup {
+  position: fixed;
+
+  right: 28px;
+  bottom: 96px;
+
+  width: 380px;
+  height: 590px;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 20px;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform: scale(0.85) translateY(20px);
+
+  transform-origin: bottom right;
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.16),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease,
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* Open */
+
+.container.show-chatbot .chatbot-popup {
+  opacity: 1;
+
+  visibility: visible;
+
+  pointer-events: auto;
+
+  transform: scale(1) translateY(0);
+}
+
+
+/* =========================================================
+   CHAT HEADER
+   ========================================================= */
+
+.chatbot-popup .chat-header {
+  min-height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px 18px;
+
+  background: #0d6efd;
+
+  color: #ffffff;
+
+  flex-shrink: 0;
+}
+
+
+/* Header information */
+
+.chat-header .header-info {
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  min-width: 0;
+}
+
+
+/* =========================================================
+   CHATBOT LOGO
+   ========================================================= */
+
+.header-info svg {
+  width: 40px;
+  height: 40px;
+
+  padding: 7px;
+
+  flex-shrink: 0;
+
+  fill: #0d6efd;
+
+  background: #ffffff;
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+
+/* =========================================================
+   HEADER TITLE
+   ========================================================= */
+
+.header-info .logo-text {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 1.05rem;
+
+  line-height: 1.2;
+
+  font-weight: 650;
+
+  letter-spacing: -0.01em;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   HEADER CLOSE BUTTON
+   ========================================================= */
+
+.chat-header button {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  margin: 0;
+
+  border: none;
+  outline: none;
+
+  border-radius: 50%;
+
+  background: transparent;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font-size: 0;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+/* Create clean arrow/down icon */
+
+.chat-header button::before {
+  content: "";
+
+  width: 9px;
+  height: 9px;
+
+  border-right: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+
+  transform: rotate(45deg) translateY(-2px);
+}
+
+
+/* Hover */
+
+.chat-header button:hover {
+  background: rgba(255, 255, 255, 0.15);
+
+  transform: scale(1.05);
+}
+
+
+/* =========================================================
+   CHAT BODY
+   ========================================================= */
+
+.chat-body {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 22px 18px 12px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 16px;
+
+  background: #ffffff;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+
+/* Chrome / Edge scrollbar */
+
+.chat-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+
+  border-radius: 999px;
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* =========================================================
+   MESSAGE BASE
+   ========================================================= */
+
+.chat-body .message {
+  display: flex;
+
+  gap: 9px;
+
+  align-items: flex-end;
+
+  width: 100%;
+}
+
+
+/* =========================================================
+   BOT MESSAGE
+   ========================================================= */
+
+.chat-body .bot-message {
+  justify-content: flex-start;
+}
+
+
+/* Bot avatar */
+
+.chat-body .bot-message svg {
+  width: 32px;
+  height: 32px;
+
+  padding: 6px;
+
+  flex-shrink: 0;
+
+  align-self: flex-end;
+
+  margin-bottom: 2px;
+
+  fill: #ffffff;
+
+  background: #0d6efd;
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 2px 6px rgba(13, 110, 253, 0.2);
+}
+
+
+/* =========================================================
+   MESSAGE TEXT
+   ========================================================= */
+
+.chat-body .message .message-text {
+  max-width: 78%;
+
+  margin: 0;
+
+  padding: 11px 14px;
+
+  font-size: 0.92rem;
+
+  line-height: 1.55;
+
+  font-weight: 400;
+
+  word-wrap: break-word;
+
+  overflow-wrap: anywhere;
+
+  white-space: pre-line;
+}
+
+
+/* =========================================================
+   BOT BUBBLE
+   ========================================================= */
+
+.chat-body .bot-message .message-text {
+  color: #334155;
+
+  background: #f1f5f9;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius:
+    14px
+    14px
+    14px
+    4px;
+}
+
+
+/* =========================================================
+   USER MESSAGE
+   ========================================================= */
+
+.chat-body .user-message {
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 0;
+}
+
+
+/* User bubble */
+
+.chat-body .user-message .message-text {
+  color: #ffffff;
+
+  background: #0d6efd;
+
+  border: 1px solid #0d6efd;
+
+  border-radius:
+    14px
+    14px
+    4px
+    14px;
+
+  box-shadow:
+    0 2px 6px rgba(13, 110, 253, 0.12);
+}
+
+
+/* =========================================================
+   CHAT FOOTER
+   ========================================================= */
+
+.chat-footer {
+  position: relative;
+
+  width: 100%;
+
+  padding: 10px 14px 14px;
+
+  background: #ffffff;
+
+  border-top: 1px solid #f1f5f9;
+
+  flex-shrink: 0;
+}
+
+
+/* =========================================================
+   CHAT FORM
+   ========================================================= */
+
+.chat-footer .chat-form {
+  width: 100%;
+
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 26px;
+
+  outline: none;
+
+  box-shadow: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+
+/* Focus */
+
+.chat-footer .chat-form:focus-within {
+  background: #ffffff;
+
+  border-color: #0d6efd;
+
+  box-shadow:
+    0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+
+/* =========================================================
+   MESSAGE INPUT
+   ========================================================= */
+
+.chat-form .message-input {
+  min-width: 0;
+
+  height: 46px;
+
+  width: 100%;
+
+  padding: 0 15px;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  color: #0f172a;
+
+  font-family: inherit;
+
+  font-size: 0.92rem;
+
+  line-height: 1.4;
+}
+
+
+/* Placeholder */
+
+.chat-form .message-input::placeholder {
+  color: #94a3b8;
+}
+
+
+/* Remove browser validation styling */
+
+.chat-form .message-input:focus,
+.chat-form .message-input:invalid,
+.chat-form .message-input:valid {
+  border: none !important;
+
+  outline: none !important;
+
+  box-shadow: none !important;
+}
+
+
+/* Disabled */
+
+.chat-form .message-input:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.7;
+}
+
+
+/* =========================================================
+   SEND BUTTON
+   ========================================================= */
+
+.chat-form button {
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  display: none;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  margin-right: 6px;
+
+  border: none;
+  outline: none;
+
+  border-radius: 50%;
+
+  background: #0d6efd;
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font-size: 0;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+/* Create send arrow */
+
+.chat-form button::before {
+  content: "";
+
+  width: 8px;
+  height: 8px;
+
+  border-top: 2px solid #ffffff;
+  border-right: 2px solid #ffffff;
+
+  transform: rotate(45deg);
+
+  margin-left: -2px;
+}
+
+
+/* Show send button */
+
+.chat-form .message-input:valid ~ button {
+  display: flex;
+}
+
+
+/* Hover */
+
+.chat-form button:hover {
+  background: #0b5ed7;
+
+  transform: scale(1.05);
+}
+
+
+/* Active */
+
+.chat-form button:active {
+  transform: scale(0.92);
+}
+
+
+/* Disabled */
+
+.chat-form button:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+
+  transform: none;
+}
+
+
+/* =========================================================
+   EMPTY / THINKING TEXT
+   ========================================================= */
+
+.chat-body .message-text {
+  animation: messageFadeIn 0.2s ease;
+}
+
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0);
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE — TABLET
+   ========================================================= */
+
+@media (max-width: 768px) {
+  #chatbot-toggler {
+    right: 22px;
+
+    bottom: 22px;
+
+    width: 54px;
+
+    height: 54px;
+  }
+
+
+  .chatbot-popup {
+    right: 22px;
+
+    bottom: 88px;
+
+    width: 360px;
+
+    height: 570px;
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 520px) {
+  #chatbot-toggler {
+    right: 18px;
+
+    bottom: 18px;
+
+    width: 52px;
+
+    height: 52px;
+  }
+
+
+  .chatbot-popup {
+    top: 0;
+
+    right: 0;
+
+    bottom: 0;
+
+    width: 100%;
+
+    height: 100%;
+
+    max-height: 100vh;
+
+    border-radius: 0;
+
+    border: none;
+
+    transform-origin: bottom center;
+  }
+
+
+  .container.show-chatbot .chatbot-popup {
+    transform: scale(1) translateY(0);
+  }
+
+
+  .chatbot-popup .chat-header {
+    min-height: 64px;
+
+    padding:
+      11px
+      14px;
+  }
+
+
+  .header-info svg {
+    width: 37px;
+
+    height: 37px;
+
+    padding: 6px;
+  }
+
+
+  .header-info .logo-text {
+    font-size: 1rem;
+  }
+
+
+  .chat-header button {
+    width: 36px;
+
+    height: 36px;
+  }
+
+
+  .chat-body {
+    padding:
+      20px
+      14px
+      10px;
+
+    gap: 14px;
+  }
+
+
+  .chat-body .message .message-text {
+    max-width: 82%;
+
+    font-size: 0.9rem;
+
+    padding:
+      10px
+      13px;
+  }
+
+
+  .chat-body .bot-message svg {
+    width: 30px;
+
+    height: 30px;
+
+    padding: 5px;
+  }
+
+
+  .chat-footer {
+    padding:
+      9px
+      12px
+      12px;
+  }
+
+
+  .chat-footer .chat-form {
+    min-height: 47px;
+  }
+
+
+  .chat-form .message-input {
+    height: 45px;
+
+    font-size: 0.9rem;
+
+    padding:
+      0
+      14px;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 360px) {
+  #chatbot-toggler {
+    right: 14px;
+
+    bottom: 14px;
+
+    width: 50px;
+
+    height: 50px;
+  }
+
+
+  .chatbot-popup .chat-header {
+    padding:
+      10px
+      12px;
+  }
+
+
+  .chat-body {
+    padding:
+      18px
+      11px
+      8px;
+  }
+
+
+  .chat-footer {
+    padding:
+      8px
+      10px
+      10px;
+  }
+
+
+  .chat-body .message .message-text {
+    max-width: 85%;
+
+    font-size: 0.88rem;
+  }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+#chatbot-toggler:focus-visible,
+.chat-header button:focus-visible,
+.chat-form button:focus-visible {
+  outline:
+    3px solid rgba(13, 110, 253, 0.35);
+
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  #chatbot-toggler,
+  #chatbot-toggler span,
+  .chatbot-popup,
+  .chat-header button,
+  .chat-form button,
+  .chat-footer .chat-form,
+  .chat-body .message-text {
+    transition: none;
+
+    animation: none;
+  }
+}
