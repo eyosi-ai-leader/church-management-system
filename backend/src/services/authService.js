@@ -4,6 +4,21 @@ const {
 
 const memberService = require("./memberService");
 
+const {
+  TOKEN_TYPES,
+  createAccountToken,
+} = require("./accountTokenService");
+
+const {
+  sendEmail,
+} = require("./emailService");
+
+const verificationEmail = require(
+  "../templates/emails/verificationEmail"
+);
+
+const env = require("../config/env");
+
 /**
  * Register a new public church member.
  *
@@ -13,6 +28,8 @@ const memberService = require("./memberService");
  * - password is hashed inside memberService
  * - profile image is handled by memberService
  * - users + members are created together
+ * - email verification token is created after account creation
+ * - verification email is sent after token creation
  */
 const registerUser = async (
   userData,
@@ -44,6 +61,14 @@ const registerUser = async (
     throw error;
   }
 
+  /*
+   * Create User + Member.
+   *
+   * memberService handles:
+   * - password hashing
+   * - profile image upload
+   * - database transaction
+   */
   const result =
     await memberService.createMember(
       {
@@ -66,9 +91,69 @@ const registerUser = async (
       profileImage
     );
 
+  /*
+   * Create secure email verification token.
+   *
+   * The accountTokenService:
+   * - generates the raw token
+   * - hashes it
+   * - stores only the hash
+   * - sets the expiration
+   */
+  const verificationToken =
+    await createAccountToken(
+      result.userId,
+      TOKEN_TYPES.EMAIL_VERIFICATION
+    );
+
+  /*
+   * Build the frontend verification URL.
+   */
+  const verificationUrl =
+    `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(
+      verificationToken.token
+    )}`;
+
+  /*
+   * Build verification email.
+   */
+  const emailContent =
+    verificationEmail({
+      firstName,
+      verificationUrl,
+    });
+
+  /*
+   * Send verification email.
+   *
+   * Important:
+   * The account has already been successfully created.
+   * Therefore, an email delivery failure should NOT make
+   * registration appear to have failed.
+   */
+  let verificationEmailSent = true;
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: emailContent.subject,
+      text: emailContent.text,
+      html: emailContent.html,
+    });
+  } catch (error) {
+    verificationEmailSent = false;
+
+    console.error(
+      "Failed to send verification email:",
+      error.message
+    );
+  }
+
   return {
-    message:
-      "Registration successful. Your member account has been created.",
+    message: verificationEmailSent
+      ? "Registration successful. Please check your email to verify your account."
+      : "Registration successful, but the verification email could not be sent. Please request a new verification email.",
+    verificationEmailSent,
     user: {
       firstName,
       middleName: middleName || null,
@@ -83,7 +168,9 @@ const registerUser = async (
   };
 };
 
-const loginUser = async (userData) => {
+const loginUser = async (
+  userData
+) => {
   const {
     email,
     password,

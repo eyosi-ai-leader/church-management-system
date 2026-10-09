@@ -54,6 +54,9 @@ const env = {
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
   EMAIL_FROM: process.env.EMAIL_FROM,
+
+   // Frontend
+  FRONTEND_URL: process.env.FRONTEND_URL,
 };
 
 module.exports = env;
