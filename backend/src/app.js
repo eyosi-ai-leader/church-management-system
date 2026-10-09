@@ -16,6 +16,8 @@ const memberRoutes = require("./routes/memberRoutes");
 
 const dashboardRoutes = require("./routes/dashboardRoutes");
 
+const ministryRoutes = require("./routes/ministryRoutes");
+
 const app = express();
 
 // Security
@@ -55,6 +57,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/members", memberRoutes);
 
 app.use("/api/dashboard", dashboardRoutes);
+
+app.use("/api/ministries", ministryRoutes);
 
 /**
  * Global Error Handler
