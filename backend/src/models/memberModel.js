@@ -549,10 +549,10 @@ const getAllMembers = async ({
       ? "DESC"
       : "ASC";
 
-  query += `
-    ORDER BY ${sortColumn} ${sortDirection}
-    LIMIT ? OFFSET ?
-  `;
+  // query += `
+  //   ORDER BY ${sortColumn} ${sortDirection}
+  //   LIMIT ? OFFSET ?
+  // `;
 
   /**
    * Always provide actual numeric values
@@ -560,20 +560,44 @@ const getAllMembers = async ({
    *
    * This prevents undefined bind parameters.
    */
-  queryParams.push(
-    Number(limit),
-    Number(offset)
-  );
+//   queryParams.push(
+//     Number(limit),
+//     Number(offset)
+//   );
 
-  const [rows] =
-    await db.execute(
-      query,
-      queryParams
-    );
+//   const [rows] =
+//     await db.execute(
+//       query,
+//       queryParams
+//     );
 
-  return rows;
-};
+//   return rows;
+// };
 
+  const safeLimit = Number.parseInt(limit, 10);
+  const safeOffset = Number.parseInt(offset, 10);
+
+  if (
+    !Number.isSafeInteger(safeLimit) ||
+    safeLimit < 1 ||
+    !Number.isSafeInteger(safeOffset) ||
+    safeOffset < 0
+  ) {
+    const error = new Error("Invalid pagination parameters.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  query += `
+    ORDER BY ${sortColumn} ${sortDirection}
+    LIMIT ${safeLimit} OFFSET ${safeOffset}
+  `;
+
+  console.log("NEW eyosi  CODE RUNNING: ", query);
+
+  const [rows] = await db.query(query, queryParams);
+
+  return rows  };
 /**
  * Count members
  *
