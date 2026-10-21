@@ -18,6 +18,8 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const ministryRoutes = require("./routes/ministryRoutes");
 
+const churchAIRoutes = require("./routes/churchAIRoutes");
+
 const app = express();
 
 // Security
@@ -60,6 +62,7 @@ app.use("/api/dashboard", dashboardRoutes);
 
 app.use("/api/ministries", ministryRoutes);
 
+app.use("/api/church-ai", churchAIRoutes);
 /**
  * Global Error Handler
  *
