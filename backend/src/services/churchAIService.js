@@ -16,8 +16,17 @@ async function getContext(question, authenticatedUser) {
     throw error;
   }
 
-  const userId = Number(authenticatedUser?.userId);
-  const roleId = Number(authenticatedUser?.roleId);
+  const userId = Number(
+  authenticatedUser?.userId ??
+  authenticatedUser?.user_id ??
+  authenticatedUser?.id ??
+  authenticatedUser?.sub
+);
+
+const roleId = Number(
+  authenticatedUser?.roleId ??
+  authenticatedUser?.role_id
+);
 
   if (!Number.isInteger(userId) || userId <= 0) {
     const error = new Error(
