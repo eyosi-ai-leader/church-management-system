@@ -199,12 +199,21 @@ export async function deleteMember(
 /**
  * Get members assigned to the ministry led by the logged-in Ministry Leader.
  */
+/**
+ * Get ministry assignments visible to the logged-in Ministry Leader.
+ *
+ * Supports:
+ * - Combined assignments across all led ministries
+ * - Filtering by a specific ministry
+ * - Search, status, role, sorting, and pagination
+ */
 export async function getMyMinistryMembers({
   page = 1,
   limit = 10,
   search = "",
   status = "",
   roleId = "",
+  ministryId = "",
   sortBy = "created_at",
   sortOrder = "desc",
 } = {}) {
@@ -223,6 +232,10 @@ export async function getMyMinistryMembers({
 
   if (roleId) {
     params.set("roleId", String(roleId));
+  }
+
+  if (ministryId) {
+    params.set("ministryId", String(ministryId));
   }
 
   if (sortBy) {

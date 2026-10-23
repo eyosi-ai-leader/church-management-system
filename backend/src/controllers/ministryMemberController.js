@@ -1,3 +1,4 @@
+
 const ministryMemberService = require("../services/ministryMemberService");
 const { successResponse, errorResponse } = require("../utils/response");
 
@@ -11,6 +12,7 @@ const getMyMinistryMembers = async (req, res) => {
         search: req.query.search ?? "",
         status: req.query.status ?? "Active",
         roleId: req.query.roleId ?? "",
+        ministryId: req.query.ministryId ?? "",
         sortBy: req.query.sortBy ?? "created_at",
         sortOrder: req.query.sortOrder ?? "desc",
       }
@@ -61,7 +63,6 @@ const updateMyMinistryMember = async (req, res) => {
   try {
     const input = { ...req.body };
 
-    // Support the existing profile-image upload middleware.
     if (req.file) {
       input.profile_image = req.file.filename;
     }

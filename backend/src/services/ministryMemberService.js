@@ -1,3 +1,4 @@
+
 const ministryMemberModel = require("../models/ministryMemberModel");
 
 async function getMyMinistryMembers(userId, options = {}) {
@@ -7,6 +8,7 @@ async function getMyMinistryMembers(userId, options = {}) {
     search = "",
     status = "Active",
     roleId = "",
+    ministryId = "",
     sortBy = "created_at",
     sortOrder = "desc",
   } = options;
@@ -47,6 +49,21 @@ async function getMyMinistryMembers(userId, options = {}) {
     throw error;
   }
 
+  let parsedMinistryId = "";
+
+  if (ministryId !== "" && ministryId !== null && ministryId !== undefined) {
+    parsedMinistryId = Number(ministryId);
+
+    if (
+      !Number.isSafeInteger(parsedMinistryId) ||
+      parsedMinistryId < 1
+    ) {
+      const error = new Error("Invalid ministry ID.");
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   const result = await ministryMemberModel.getLeaderMembers(userId, {
     page: parsedPage,
     limit: parsedLimit,
@@ -54,6 +71,7 @@ async function getMyMinistryMembers(userId, options = {}) {
     search: String(search || "").trim(),
     status: status || "Active",
     roleId,
+    ministryId: parsedMinistryId,
     sortBy,
     sortOrder,
   });

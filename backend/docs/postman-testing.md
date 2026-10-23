@@ -151,6 +151,13 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjEsInJvbGVJZCI6NCwiZW1haWwiOiJtaW5
   "password": "Leader@12345"
 }
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTcsInJvbGVJZCI6MywiZW1haWwiOiJsZWFkZXIxQGNodXJjaC50ZXN0IiwiaWF0IjoxNzg2OTcxNDA1LCJleHAiOjE3ODcwNTc4MDV9.JeyHcUWwj_p0zz2F8hbmvCyGY4miqACu8zS9SdW3hmU
+
+{
+  "email": "ermias@gmail.com",
+  "password": "12345678"
+}
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsInJvbGVJZCI6NCwiZW1haWwiOiJlcm1pYXNAZ21haWwuY29tIiwiaWF0IjoxNzkyNzYzOTAwLCJleHAiOjE3OTI4NTAzMDB9.fzTuRN_6p0Dkjrt1A53M2MWtV-wZar3xFjZ9v8O0ngg
+
 You will receive something like: 
 {
   "success": true,
