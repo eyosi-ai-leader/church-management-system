@@ -99,6 +99,10 @@ export async function getMinistryMembers(id, role = "") {
   );
 }
 
+export async function getMyMinistries() {
+  return request(`${API_URL}/ministries/my-ministries`);
+}
+
 export async function assignMinistryMember(
   ministryId,
   { memberId, assignmentRole = "Member" }

@@ -17,7 +17,10 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { getMemberById } from "@/lib/memberApi";
+import {
+  getMemberById,
+  getMyMinistryMemberById,
+} from "@/lib/memberApi";
 import { canManageMembers } from "@/lib/roles";
 
 function getRoleName(member) {
@@ -188,52 +191,55 @@ export default function MemberDetailsPage() {
 
   const canManage = canManageMembers(roleId);
 
-  React.useEffect(() => {
-    if (!memberId) {
-      return;
-    }
+ React.useEffect(() => {
+  if (!userLoaded || !memberId) {
+    return;
+  }
 
-    let mounted = true;
+  let mounted = true;
 
-    async function loadMember() {
-      try {
-        setLoading(true);
-        setError("");
+  async function loadMember() {
+    try {
+      setLoading(true);
+      setError("");
 
-        const result = await getMemberById(memberId);
+      const result =
+        Number(roleId) === 4
+          ? await getMyMinistryMemberById(memberId)
+          : await getMemberById(memberId);
 
-        if (!mounted) {
-          return;
-        }
+      if (!mounted) {
+        return;
+      }
 
-        const memberData =
-          result?.data ||
-          result?.member ||
-          result;
+      const memberData =
+        result?.data ||
+        result?.member ||
+        result;
 
-        setMember(memberData);
-      } catch (err) {
-        if (!mounted) {
-          return;
-        }
+      setMember(memberData);
+    } catch (err) {
+      if (!mounted) {
+        return;
+      }
 
-        setError(
-          err?.message ||
-            "Unable to load member information."
-        );
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      setError(
+        err?.message ||
+          "Unable to load member information."
+      );
+    } finally {
+      if (mounted) {
+        setLoading(false);
       }
     }
+  }
 
-    loadMember();
+  loadMember();
 
-    return () => {
-      mounted = false;
-    };
-  }, [memberId]);
+  return () => {
+    mounted = false;
+  };
+}, [memberId, userLoaded, roleId]);
 
   if (!userLoaded || loading) {
     return (

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import Link from "next/link";
 
 import {
   getMembers,
+  getMyMinistryMembers,
   deleteMember,
   updateMember,
 } from "@/lib/memberApi";
@@ -67,16 +69,14 @@ export default function MembersPage() {
         setRoleId(Number(user?.roleId));
       }
     } catch (error) {
-      console.error(
-        "Failed to load current user:",
-        error
-      );
+      console.error("Failed to load current user:", error);
     } finally {
       setUserLoaded(true);
     }
   }, []);
 
   const canManage = canManageMembers(roleId);
+  const isMinistryLeader = Number(roleId) === 4;
 
   const loadMembers = useCallback(
     async (showRefresh = false) => {
@@ -89,7 +89,7 @@ export default function MembersPage() {
 
         setError("");
 
-        const response = await getMembers({
+        const requestOptions = {
           page: pagination.page,
           limit: pagination.limit,
           search: filters.search,
@@ -97,23 +97,25 @@ export default function MembersPage() {
           roleId: filters.roleId,
           sortBy: filters.sortBy,
           sortOrder: filters.sortOrder,
-        });
+        };
 
-        setMembers(response?.data || []);
+        const response = isMinistryLeader
+          ? await getMyMinistryMembers(requestOptions)
+          : await getMembers(requestOptions);
+
+        setMembers(
+          Array.isArray(response?.data) ? response.data : []
+        );
 
         setPagination((previous) => ({
           ...previous,
           ...(response?.pagination || {}),
         }));
       } catch (error) {
-        console.error(
-          "Members loading error:",
-          error
-        );
+        console.error("Members loading error:", error);
 
         setError(
-          error.message ||
-            "Failed to load members."
+          error.message || "Failed to load members."
         );
       } finally {
         setLoading(false);
@@ -121,6 +123,7 @@ export default function MembersPage() {
       }
     },
     [
+      isMinistryLeader,
       pagination.page,
       pagination.limit,
       filters.search,
@@ -139,15 +142,12 @@ export default function MembersPage() {
     loadMembers();
   }, [userLoaded, loadMembers]);
 
-  function handleRefresh() {
+  async function handleRefresh() {
     if (refreshing) {
       return;
     }
 
-    setRefreshing(true);
-    setError("");
-
-    window.location.reload();
+    await loadMembers(true);
   }
 
   function handleSearch(value) {
@@ -230,19 +230,14 @@ export default function MembersPage() {
       setError("");
 
       await deleteMember(deleteTarget.id);
-
       setDeleteTarget(null);
 
       await loadMembers(true);
     } catch (error) {
-      console.error(
-        "Delete member error:",
-        error
-      );
+      console.error("Delete member error:", error);
 
       setError(
-        error.message ||
-          "Failed to delete member."
+        error.message || "Failed to delete member."
       );
     } finally {
       setDeleting(false);
@@ -258,10 +253,7 @@ export default function MembersPage() {
     setError("");
   }
 
-  async function handleStatusConfirm(
-    member,
-    status
-  ) {
+  async function handleStatusConfirm(member, status) {
     if (!member || !canManage) {
       return;
     }
@@ -270,22 +262,15 @@ export default function MembersPage() {
       setChangingStatus(true);
       setError("");
 
-      await updateMember(member.id, {
-        status,
-      });
-
+      await updateMember(member.id, { status });
       setStatusTarget(null);
 
       await loadMembers(true);
     } catch (error) {
-      console.error(
-        "Change member status error:",
-        error
-      );
+      console.error("Change member status error:", error);
 
       setError(
-        error.message ||
-          "Failed to change member status."
+        error.message || "Failed to change member status."
       );
     } finally {
       setChangingStatus(false);
@@ -301,10 +286,7 @@ export default function MembersPage() {
     setError("");
   }
 
-  async function handleRoleConfirm(
-    member,
-    selectedRoleId
-  ) {
+  async function handleRoleConfirm(member, selectedRoleId) {
     if (!member || !canManage) {
       return;
     }
@@ -321,14 +303,10 @@ export default function MembersPage() {
 
       await loadMembers(true);
     } catch (error) {
-      console.error(
-        "Change member role error:",
-        error
-      );
+      console.error("Change member role error:", error);
 
       setError(
-        error.message ||
-          "Failed to change member role."
+        error.message || "Failed to change member role."
       );
     } finally {
       setChangingRole(false);
@@ -342,33 +320,30 @@ export default function MembersPage() {
 
   return (
     <div className="min-h-full space-y-6">
-      {/* Header */}
-
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-              <Users
-                size={19}
-                strokeWidth={2}
-              />
+              <Users size={19} strokeWidth={2} />
             </div>
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Management
+                {isMinistryLeader ? "My Ministry" : "Management"}
               </p>
 
               <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">
-                Members
+                {isMinistryLeader ? "Ministry Members" : "Members"}
               </h1>
             </div>
           </div>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-            {canManage
-              ? "Manage church members, monitor their status, and keep member information organized."
-              : "View and oversee church member information, status, and directory records."}
+            {isMinistryLeader
+              ? "View members assigned to the ministry you lead."
+              : canManage
+                ? "Manage church members, monitor their status, and keep member information organized."
+                : "View and oversee church member information, status, and directory records."}
           </p>
         </div>
 
@@ -381,17 +356,11 @@ export default function MembersPage() {
           >
             <RefreshCw
               size={16}
-              className={
-                refreshing
-                  ? "animate-spin"
-                  : ""
-              }
+              className={refreshing ? "animate-spin" : ""}
             />
 
             <span className="hidden sm:inline">
-              {refreshing
-                ? "Refreshing..."
-                : "Refresh"}
+              {refreshing ? "Refreshing..." : "Refresh"}
             </span>
           </button>
 
@@ -406,8 +375,6 @@ export default function MembersPage() {
           )}
         </div>
       </div>
-
-      {/* Summary */}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -469,8 +436,6 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Filters */}
-
       <MemberFilters
         filters={filters}
         onSearch={handleSearch}
@@ -480,8 +445,6 @@ export default function MembersPage() {
         onClear={handleClearFilters}
         hasFilters={hasFilters}
       />
-
-      {/* Error */}
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -502,15 +465,11 @@ export default function MembersPage() {
               disabled={refreshing}
               className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {refreshing
-                ? "Refreshing..."
-                : "Try again"}
+              {refreshing ? "Refreshing..." : "Try again"}
             </button>
           </div>
         </div>
       )}
-
-      {/* Table */}
 
       <MembersTable
         members={members}
@@ -524,54 +483,38 @@ export default function MembersPage() {
         canManage={canManage}
       />
 
-      {/* Pagination */}
-
-      {!loading &&
-        !error &&
-        pagination.total > 0 && (
-          <MemberPagination
-            pagination={pagination}
-            onPageChange={handlePageChange}
-          />
-        )}
-
-      {/* Delete Dialog */}
+      {!loading && !error && pagination.total > 0 && (
+        <MemberPagination
+          pagination={pagination}
+          onPageChange={handlePageChange}
+        />
+      )}
 
       {canManage && (
         <MemberDeleteDialog
           member={deleteTarget}
           deleting={deleting}
-          onCancel={() =>
-            setDeleteTarget(null)
-          }
+          onCancel={() => setDeleteTarget(null)}
           onConfirm={handleDelete}
         />
       )}
-
-      {/* Change Status Modal */}
 
       {canManage && (
         <ChangeStatusModal
           member={statusTarget}
           open={Boolean(statusTarget)}
           saving={changingStatus}
-          onClose={() =>
-            setStatusTarget(null)
-          }
+          onClose={() => setStatusTarget(null)}
           onConfirm={handleStatusConfirm}
         />
       )}
-
-      {/* Change Role Modal */}
 
       {canManage && (
         <ChangeRoleModal
           member={roleTarget}
           open={Boolean(roleTarget)}
           saving={changingRole}
-          onClose={() =>
-            setRoleTarget(null)
-          }
+          onClose={() => setRoleTarget(null)}
           onConfirm={handleRoleConfirm}
         />
       )}

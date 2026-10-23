@@ -351,6 +351,148 @@ async function getDashboardOverview(user) {
     };
   }
 
+
+  
+  // ==========================================
+  // MINISTRY LEADER DASHBOARD
+  // roleId = 4
+  // ==========================================
+  if (Number(user.roleId) === 4) {
+    // Find only ministries assigned to the authenticated leader.
+    const [ministryRows] = await db.query(
+      `
+        SELECT DISTINCT
+          mi.id,
+          mi.name,
+          mi.description,
+          mi.status
+        FROM members m
+        INNER JOIN ministry_members mm
+          ON mm.member_id = m.id
+        INNER JOIN ministries mi
+          ON mi.id = mm.ministry_id
+        INNER JOIN users u
+          ON u.id = m.user_id
+        WHERE m.user_id = ?
+          AND m.status = 'Active'
+          AND u.is_active = 1
+          AND mm.assignment_role = 'Ministry Leader'
+          AND mm.status = 'Active'
+          AND mi.status = 'Active'
+        ORDER BY mi.name ASC
+      `,
+      [user.id]
+    );
+
+    // A leader may have no active ministry assignments.
+    if (ministryRows.length === 0) {
+      return {
+        role: "Ministry Leader",
+        ministries: [],
+        summary: {
+          totalMinistries: 0,
+          totalMembers: 0,
+        },
+        message: "You do not currently have an active ministry assignment.",
+      };
+    }
+
+    const ministries = [];
+
+    // Fetch the active roster for each ministry the leader manages.
+    for (const ministry of ministryRows) {
+      const [memberRows] = await db.query(
+        `
+          SELECT
+            m.id AS memberId,
+            u.id AS userId,
+            m.member_number AS memberNumber,
+            u.first_name AS firstName,
+            u.middle_name AS middleName,
+            u.last_name AS lastName,
+            u.email,
+            COALESCE(m.phone, u.phone) AS phone,
+            u.profile_image AS profileImage,
+            m.status AS memberStatus,
+            m.created_at AS memberSince,
+            m.updated_at AS updatedAt,
+            CASE
+              WHEN m.date_of_birth IS NOT NULL
+              THEN TIMESTAMPDIFF(
+                YEAR,
+                m.date_of_birth,
+                CURDATE()
+              )
+              ELSE NULL
+            END AS age,
+            mm.assignment_role AS assignmentRole,
+            mm.assigned_at AS assignedAt
+          FROM ministry_members mm
+          INNER JOIN members m
+            ON m.id = mm.member_id
+          INNER JOIN users u
+            ON u.id = m.user_id
+          WHERE mm.ministry_id = ?
+            AND mm.status = 'Active'
+            AND m.status = 'Active'
+            AND u.is_active = 1
+          ORDER BY u.first_name ASC, u.last_name ASC
+        `,
+        [ministry.id]
+      );
+
+      const members = memberRows.map((member) => ({
+        id: member.memberId,
+        userId: member.userId,
+        memberNumber: member.memberNumber,
+        firstName: member.firstName,
+        middleName: member.middleName,
+        lastName: member.lastName,
+        fullName: [
+          member.firstName,
+          member.middleName,
+          member.lastName,
+        ]
+          .filter(Boolean)
+          .join(" "),
+        email: member.email,
+        phone: member.phone,
+        profileImage: member.profileImage,
+        age:
+          member.age === null || member.age === undefined
+            ? null
+            : Number(member.age),
+        status: member.memberStatus,
+        memberSince: member.memberSince,
+        updatedAt: member.updatedAt,
+        assignmentRole: member.assignmentRole,
+        assignedAt: member.assignedAt,
+      }));
+
+      ministries.push({
+        id: ministry.id,
+        name: ministry.name,
+        description: ministry.description,
+        status: ministry.status,
+        memberCount: members.length,
+        members,
+      });
+    }
+
+    return {
+      role: "Ministry Leader",
+      ministries,
+      summary: {
+        totalMinistries: ministries.length,
+        totalMembers: ministries.reduce(
+          (total, ministry) => total + ministry.memberCount,
+          0
+        ),
+      },
+    };
+  }
+
+
   // ==========================================
 // MEMBER DASHBOARD
 // roleId = 5

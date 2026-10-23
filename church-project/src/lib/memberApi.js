@@ -195,3 +195,54 @@ export async function deleteMember(
     }
   );
 }
+
+/**
+ * Get members assigned to the ministry led by the logged-in Ministry Leader.
+ */
+export async function getMyMinistryMembers({
+  page = 1,
+  limit = 10,
+  search = "",
+  status = "",
+  roleId = "",
+  sortBy = "created_at",
+  sortOrder = "desc",
+} = {}) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  if (status) {
+    params.set("status", String(status));
+  }
+
+  if (roleId) {
+    params.set("roleId", String(roleId));
+  }
+
+  if (sortBy) {
+    params.set("sortBy", sortBy);
+  }
+
+  if (sortOrder) {
+    params.set("sortOrder", sortOrder);
+  }
+
+  return request(
+    `${API_URL}/members/my-ministry?${params.toString()}`
+  );
+}
+
+/**
+ * Get one member assigned to the logged-in Ministry Leader's ministry.
+ */
+export async function getMyMinistryMemberById(id) {
+  return request(
+    `${API_URL}/members/my-ministry/${encodeURIComponent(id)}`
+  );
+}

@@ -1,8 +1,9 @@
 const express = require("express");
-
 const router = express.Router();
 
 const memberController = require("../controllers/memberController");
+const ministryMemberController = require("../controllers/ministryMemberController");
+
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
@@ -12,15 +13,9 @@ const {
   updateMemberValidator,
 } = require("../validators/memberValidator");
 
-const {
-  uploadProfileImage,
-} = require("../middleware/uploadMiddleware");
-
+const { uploadProfileImage } = require("../middleware/uploadMiddleware");
 const { validationResult } = require("express-validator");
 
-/**
- * Handle validation errors
- */
 const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
 
@@ -35,23 +30,43 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
+router.use(authMiddleware);
+
 /**
- * Create member
- *
- * Allowed roles:
- * 1 = Admin
- * 2 = Pastor
- *
- * Supports:
- * - Member information
- * - Optional profile image
- *
- * Profile image field name:
- * profileImage
+ * Ministry Leader routes.
+ * Role 4 can access only members assigned to active ministries
+ * that the authenticated leader actively leads.
+ */
+router.get(
+  "/my-ministry",
+  roleMiddleware(4),
+  ministryMemberController.getMyMinistryMembers
+);
+
+router.get(
+  "/my-ministry/:id",
+  roleMiddleware(4),
+  memberIdValidator,
+  validateRequest,
+  ministryMemberController.getMyMinistryMemberById
+);
+
+router.put(
+  "/my-ministry/:id",
+  roleMiddleware(4),
+  uploadProfileImage.single("profileImage"),
+  memberIdValidator,
+  updateMemberValidator,
+  validateRequest,
+  ministryMemberController.updateMyMinistryMember
+);
+
+/**
+ * Create member.
+ * Roles: Admin (1), Pastor (2).
  */
 router.post(
   "/",
-  authMiddleware,
   roleMiddleware(1, 2),
   uploadProfileImage.single("profileImage"),
   createMemberValidator,
@@ -60,38 +75,21 @@ router.post(
 );
 
 /**
- * Get all members
- *
- * Allowed roles:
- * 1 = Admin
- * 2 = Pastor
- * 3 = Church Elder
- *
- * Supports:
- * - Pagination
- * - Search
- * - Status filter
- * - Role filter
- * - Sorting
+ * General member list.
+ * Roles: Admin (1), Pastor (2), Church Elder (3).
  */
 router.get(
   "/",
-  authMiddleware,
   roleMiddleware(1, 2, 3),
   memberController.getAllMembers
 );
 
 /**
- * Get member by ID
- *
- * Allowed roles:
- * 1 = Admin
- * 2 = Pastor
- * 3 = Church Elder
+ * General member details.
+ * Roles: Admin (1), Pastor (2), Church Elder (3).
  */
 router.get(
   "/:id",
-  authMiddleware,
   roleMiddleware(1, 2, 3),
   memberIdValidator,
   validateRequest,
@@ -99,15 +97,11 @@ router.get(
 );
 
 /**
- * Update member
- *
- * Allowed roles:
- * 1 = Admin
- * 2 = Pastor
+ * General member update.
+ * Roles: Admin (1), Pastor (2).
  */
 router.put(
   "/:id",
-  authMiddleware,
   roleMiddleware(1, 2),
   uploadProfileImage.single("profileImage"),
   updateMemberValidator,
@@ -116,15 +110,11 @@ router.put(
 );
 
 /**
- * Delete member
- *
- * Allowed roles:
- * 1 = Admin
- * 2 = Pastor
+ * Delete member.
+ * Roles: Admin (1), Pastor (2).
  */
 router.delete(
   "/:id",
-  authMiddleware,
   roleMiddleware(1, 2),
   memberIdValidator,
   validateRequest,

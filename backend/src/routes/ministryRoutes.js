@@ -8,6 +8,15 @@ const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
 router.use(authMiddleware);
+
+// Dedicated route: leaders can retrieve only their own ministries.
+router.get(
+  "/my-ministries",
+  roleMiddleware(4),
+  ministryController.getMyMinistries
+);
+
+// Existing administrative routes remain restricted.
 router.use(roleMiddleware(1, 2, 3));
 
 // Ministry CRUD and status

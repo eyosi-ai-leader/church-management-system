@@ -160,6 +160,23 @@ const moveMember = async (req, res) => {
   }
 };
 
+
+const getMyMinistries = async (req, res) => {
+  try {
+    const data = await ministryService.getLeaderMinistries(
+      req.user.id
+    );
+
+    return res.json({
+      success: true,
+      message: "Your ministries retrieved successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
 module.exports = {
   list,
   getById,
@@ -170,4 +187,5 @@ module.exports = {
   assignMember,
   removeAssignment,
   moveMember,
+  getMyMinistries,
 };

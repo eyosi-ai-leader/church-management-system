@@ -275,6 +275,12 @@ const moveMember = async (fromMinistryId, toMinistryId, memberId) => {
   }
 };
 
+const getLeaderMinistries = async (userId) => {
+  userId = validateId(userId, "User ID");
+
+  return ministryModel.getLeaderMinistries(userId);
+};
+
 module.exports = {
   listMinistries,
   getMinistry,
@@ -285,4 +291,5 @@ module.exports = {
   assignMember,
   removeAssignment,
   moveMember,
+  getLeaderMinistries,
 };
