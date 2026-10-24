@@ -6,7 +6,8 @@ import { getRoleName } from "@/lib/roles";
 import { DashboardOverview } from "@/components/dashboard/overview";
 import ChurchElderDashboard from "@/components/dashboard/elder/ChurchElderDashboard";
 import PersonalDashboard from "@/components/dashboard/personal/PersonalDashboard";
-
+import MinistryLeaderDashboard from "@/components/dashboard/ministries/MinistryLeaderDashboard";
+console.log("MinistryLeaderDashboard:", typeof MinistryLeaderDashboard, MinistryLeaderDashboard);
 export default function RoleBasedDashboard() {
   const [currentDate, setCurrentDate] = useState("");
   const [user, setUser] = useState(null);
@@ -128,7 +129,7 @@ function DashboardContent({
 
     case 4:
       return (
-        <DashboardOverview
+        <MinistryLeaderDashboard
           currentDate={currentDate}
           user={user}
           roleName={roleName}

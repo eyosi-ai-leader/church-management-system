@@ -47,6 +47,10 @@ async function request(url, options = {}) {
   return result;
 }
 
+// =====================================================
+// ADMIN / PASTOR / CHURCH ELDER MINISTRY API
+// =====================================================
+
 export async function getMinistries({ search = "", status = "" } = {}) {
   const params = new URLSearchParams();
 
@@ -99,10 +103,6 @@ export async function getMinistryMembers(id, role = "") {
   );
 }
 
-export async function getMyMinistries() {
-  return request(`${API_URL}/ministries/my-ministries`);
-}
-
 export async function assignMinistryMember(
   ministryId,
   { memberId, assignmentRole = "Member" }
@@ -119,16 +119,87 @@ export async function assignMinistryMember(
 export async function removeMinistryMember(ministryId, memberId) {
   return request(
     `${API_URL}/ministries/${encodeURIComponent(ministryId)}/members/${encodeURIComponent(memberId)}`,
-    { method: "DELETE" }
+    {
+      method: "DELETE",
+    }
   );
 }
 
-export async function moveMinistryMember(ministryId, memberId, toMinistryId) {
+export async function moveMinistryMember(
+  ministryId,
+  memberId,
+  toMinistryId
+) {
   return request(
     `${API_URL}/ministries/${encodeURIComponent(ministryId)}/members/${encodeURIComponent(memberId)}/move`,
     {
       method: "POST",
       body: JSON.stringify({ toMinistryId }),
+    }
+  );
+}
+
+// =====================================================
+// MINISTRY LEADER API — RESTRICTED TO OWN MINISTRY
+// =====================================================
+
+export async function getMyMinistries() {
+  return request(`${API_URL}/ministries/my-ministries`);
+}
+
+export async function getLeaderMinistryMembers(
+  ministryId,
+  status = "Active"
+) {
+  const params = new URLSearchParams({ status });
+
+  return request(
+    `${API_URL}/ministries/${encodeURIComponent(ministryId)}/leader-members?${params.toString()}`
+  );
+}
+
+export async function updateLeaderMinistryDetails(ministryId, data) {
+  return request(
+    `${API_URL}/ministries/${encodeURIComponent(ministryId)}/leader-details`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description,
+      }),
+    }
+  );
+}
+
+export async function addLeaderMinistryMember(ministryId, memberId) {
+  return request(
+    `${API_URL}/ministries/${encodeURIComponent(ministryId)}/leader-members`,
+    {
+      method: "POST",
+      body: JSON.stringify({ memberId }),
+    }
+  );
+}
+
+export async function updateLeaderMemberAssignmentStatus(
+  ministryId,
+  memberId,
+  status
+) {
+  return request(
+    `${API_URL}/ministries/${encodeURIComponent(ministryId)}/leader-members/${encodeURIComponent(memberId)}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
+export async function removeLeaderMinistryMember(ministryId, memberId) {
+  return request(
+    `${API_URL}/ministries/${encodeURIComponent(ministryId)}/leader-members/${encodeURIComponent(memberId)}`,
+    {
+      method: "DELETE",
     }
   );
 }

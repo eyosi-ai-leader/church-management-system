@@ -158,66 +158,83 @@ const navigationByRole = {
       ],
     },
     {
-      label: "Oversight",
-      items: [
-        {
-          name: "Insights",
-          href: "/dashboard/insights",
-          icon: BarChart3,
-        },
-      ],
-    },
+    label: "Intelligence",
+    items: [
+      {
+        name: "Church AI",
+        href: "/dashboard/ai",
+        icon: Sparkles,
+        badge: "AI",
+      },
+      {
+        name: "Insights",
+        href: "/dashboard/insights",
+        icon: BarChart3,
+      },
+    ],
+  },
   ],
 
   [ROLES.MINISTRY_LEADER]: [
-    {
-      label: "Overview",
-      items: [
-        {
-          name: "Dashboard",
-          href: "/dashboard",
-          icon: LayoutDashboard,
-        },
-      ],
-    },
-    {
-      label: "My Ministry",
-      items: [
-        {
-          name: "Ministry Overview",
-          href: "/dashboard/ministries",
-          icon: Church,
-        },
-        {
-          name: "Ministry Members",
-          href: "/dashboard/members",
-          icon: Users,
-        },
-        {
-          name: "Ministry Events",
-          href: "/dashboard/events",
-          icon: CalendarDays,
-        },
-      ],
-    },
-    {
-      label: "Activities",
-      items: [
-        {
-          name: "Activities",
-          href: "/dashboard/activities",
-          icon: Activity,
-          comingSoon: true,
-        },
-        {
-          name: "Announcements",
-          href: "/dashboard/announcements",
-          icon: Megaphone,
-          comingSoon: true,
-        },
-      ],
-    },
-  ],
+  {
+    label: "Overview",
+    items: [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    label: "My Ministry",
+    items: [
+      {
+        name: "Ministry Members",
+        href: "/dashboard/members",
+        icon: Users,
+      },
+      {
+        name: "Ministry Events",
+        href: "/dashboard/events",
+        icon: CalendarDays,
+      },
+    ],
+  },
+  {
+    label: "Activity",
+    items: [
+      {
+        name: "Activities",
+        href: "/dashboard/activities",
+        icon: Activity,
+        comingSoon: true,
+      },
+      {
+        name: "Announcements",
+        href: "/dashboard/announcements",
+        icon: Megaphone,
+        comingSoon: true,
+      },
+    ],
+  },
+  {
+    label: "Intelligence",
+    items: [
+      {
+        name: "Church AI",
+        href: "/dashboard/ai",
+        icon: Sparkles,
+        badge: "AI",
+      },
+      {
+        name: "Insights",
+        href: "/dashboard/insights",
+        icon: BarChart3,
+      },
+    ],
+  },
+],
 
   [ROLES.MEMBER]: [
     {
