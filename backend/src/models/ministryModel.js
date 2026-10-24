@@ -28,6 +28,7 @@ const listMinistries = async ({ search = "", status = "" } = {}) => {
     FROM ministries m
     WHERE 1 = 1
   `;
+
   const params = [];
 
   if (search) {
@@ -50,11 +51,13 @@ const getMinistryById = async (id) => {
   const [rows] = await db.execute(
     `SELECT
        m.*,
-       (SELECT COUNT(*) FROM ministry_members mm
+       (SELECT COUNT(*)
+        FROM ministry_members mm
         WHERE mm.ministry_id = m.id
           AND mm.status = 'Active'
           AND mm.assignment_role = 'Member') AS member_count,
-       (SELECT COUNT(*) FROM ministry_members mm
+       (SELECT COUNT(*)
+        FROM ministry_members mm
         WHERE mm.ministry_id = m.id
           AND mm.status = 'Active'
           AND mm.assignment_role = 'Ministry Leader') AS leader_count
@@ -88,6 +91,18 @@ const updateMinistry = async (id, { name, description, imageUrl }) => {
   return getMinistryById(id);
 };
 
+// Ministry Leaders can edit only their ministry's name and description.
+const updateLeaderMinistry = async (id, { name, description }) => {
+  await db.execute(
+    `UPDATE ministries
+     SET name = ?, description = ?
+     WHERE id = ?`,
+    [name, description || null, id]
+  );
+
+  return getMinistryById(id);
+};
+
 const updateMinistryStatus = async (id, status) => {
   await db.execute(
     "UPDATE ministries SET status = ? WHERE id = ?",
@@ -97,7 +112,36 @@ const updateMinistryStatus = async (id, status) => {
   return getMinistryById(id);
 };
 
-const getMinistryMembers = async (ministryId, role = "") => {
+// Check that the authenticated user currently leads this active ministry.
+const isLeaderOfMinistry = async (userId, ministryId) => {
+  const [rows] = await db.execute(
+    `SELECT 1
+     FROM ministry_members leader_assignment
+     INNER JOIN members leader_member
+       ON leader_member.id = leader_assignment.member_id
+     INNER JOIN users leader_user
+       ON leader_user.id = leader_member.user_id
+     INNER JOIN ministries mi
+       ON mi.id = leader_assignment.ministry_id
+     WHERE leader_user.id = ?
+       AND mi.id = ?
+       AND mi.status = 'Active'
+       AND leader_assignment.assignment_role = 'Ministry Leader'
+       AND leader_assignment.status = 'Active'
+       AND leader_member.status = 'Active'
+       AND leader_user.is_active = 1
+     LIMIT 1`,
+    [userId, ministryId]
+  );
+
+  return rows.length > 0;
+};
+
+const getMinistryMembers = async (
+  ministryId,
+  role = "",
+  status = "Active"
+) => {
   let query = `
     SELECT
       mm.id AS assignment_id,
@@ -108,7 +152,17 @@ const getMinistryMembers = async (ministryId, role = "") => {
       mm.assigned_at,
       mm.ended_at,
       m.member_number,
+      m.gender,
+      m.date_of_birth,
+      m.baptism_date,
+      m.address,
+      m.phone AS member_phone,
       m.status AS member_status,
+      CASE
+        WHEN m.date_of_birth IS NOT NULL
+        THEN TIMESTAMPDIFF(YEAR, m.date_of_birth, CURDATE())
+        ELSE NULL
+      END AS age,
       u.first_name,
       u.middle_name,
       u.last_name,
@@ -119,9 +173,14 @@ const getMinistryMembers = async (ministryId, role = "") => {
     INNER JOIN members m ON m.id = mm.member_id
     INNER JOIN users u ON u.id = m.user_id
     WHERE mm.ministry_id = ?
-      AND mm.status = 'Active'
   `;
+
   const params = [ministryId];
+
+  if (status && status !== "All") {
+    query += " AND mm.status = ?";
+    params.push(status);
+  }
 
   if (role) {
     query += " AND mm.assignment_role = ?";
@@ -134,10 +193,31 @@ const getMinistryMembers = async (ministryId, role = "") => {
   return rows;
 };
 
+// Fetch the latest assignment record for a particular member/ministry pair.
+const getMinistryAssignment = async (ministryId, memberId) => {
+  const [rows] = await db.execute(
+    `SELECT id, ministry_id, member_id, assignment_role, status
+     FROM ministry_members
+     WHERE ministry_id = ? AND member_id = ?
+     ORDER BY id DESC
+     LIMIT 1`,
+    [ministryId, memberId]
+  );
+
+  return rows[0] || null;
+};
+
 const getEligibleMember = async (memberId, connection = db) => {
   const [rows] = await connection.execute(
-    `SELECT m.id, m.member_number, m.status, u.first_name,
-            u.middle_name, u.last_name, u.email, u.is_active
+    `SELECT
+       m.id,
+       m.member_number,
+       m.status,
+       u.first_name,
+       u.middle_name,
+       u.last_name,
+       u.email,
+       u.is_active
      FROM members m
      INNER JOIN users u ON u.id = m.user_id
      WHERE m.id = ?
@@ -195,8 +275,15 @@ const getLeaderMinistries = async (userId) => {
        mm.ministry_id,
        mm.member_id,
        mm.assignment_role,
+       mm.status AS assignment_status,
        mm.assigned_at,
+       mm.ended_at,
        m.member_number,
+       m.gender,
+       m.date_of_birth,
+       m.baptism_date,
+       m.address,
+       m.phone AS member_phone,
        m.status AS member_status,
        CASE
          WHEN m.date_of_birth IS NOT NULL
@@ -243,8 +330,11 @@ module.exports = {
   getMinistryById,
   createMinistry,
   updateMinistry,
+  updateLeaderMinistry,
   updateMinistryStatus,
+  isLeaderOfMinistry,
   getMinistryMembers,
+  getMinistryAssignment,
   getEligibleMember,
   getLeaderMinistries,
 };

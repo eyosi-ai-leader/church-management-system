@@ -10,9 +10,11 @@ const httpError = (message, statusCode = 400) => {
 
 const validateId = (value, label = "ID") => {
   const id = Number(value);
+
   if (!Number.isInteger(id) || id < 1) {
     throw httpError(`${label} must be a positive integer.`);
   }
+
   return id;
 };
 
@@ -20,13 +22,19 @@ const listMinistries = async ({ search = "", status = "" } = {}) => {
   if (status && !["Active", "Inactive"].includes(status)) {
     throw httpError("Status must be Active or Inactive.");
   }
+
   return ministryModel.listMinistries({ search, status });
 };
 
 const getMinistry = async (id) => {
   id = validateId(id, "Ministry ID");
+
   const ministry = await ministryModel.getMinistryById(id);
-  if (!ministry) throw httpError("Ministry not found.", 404);
+
+  if (!ministry) {
+    throw httpError("Ministry not found.", 404);
+  }
+
   return ministry;
 };
 
@@ -34,6 +42,7 @@ const createMinistry = async ({ name, description, imageUrl }) => {
   if (typeof name !== "string" || !name.trim()) {
     throw httpError("Ministry name is required.");
   }
+
   if (name.trim().length > 100) {
     throw httpError("Ministry name cannot exceed 100 characters.");
   }
@@ -52,6 +61,7 @@ const updateMinistry = async (id, { name, description, imageUrl }) => {
   if (typeof name !== "string" || !name.trim()) {
     throw httpError("Ministry name is required.");
   }
+
   if (name.trim().length > 100) {
     throw httpError("Ministry name cannot exceed 100 characters.");
   }
@@ -82,10 +92,15 @@ const getMembers = async (id, role = "") => {
     throw httpError("Invalid assignment role.");
   }
 
+  // Preserve existing behavior: return active assignments by default.
   return ministryModel.getMinistryMembers(id, role);
 };
 
-const assignMember = async (ministryId, memberId, assignmentRole = "Member") => {
+const assignMember = async (
+  ministryId,
+  memberId,
+  assignmentRole = "Member"
+) => {
   ministryId = validateId(ministryId, "Ministry ID");
   memberId = validateId(memberId, "Member ID");
 
@@ -103,15 +118,23 @@ const assignMember = async (ministryId, memberId, assignmentRole = "Member") => 
       [ministryId]
     );
 
-    if (!ministries[0]) throw httpError("Ministry not found.", 404);
+    if (!ministries[0]) {
+      throw httpError("Ministry not found.", 404);
+    }
+
     if (ministries[0].status !== "Active") {
       throw httpError("Cannot assign people to an inactive ministry.");
     }
 
-    const member = await ministryModel.getEligibleMember(memberId, connection);
-    if (!member) throw httpError("Active church member not found.", 404);
+    const member = await ministryModel.getEligibleMember(
+      memberId,
+      connection
+    );
 
-    // Lock the member row to reduce concurrent duplicate assignments.
+    if (!member) {
+      throw httpError("Active church member not found.", 404);
+    }
+
     await connection.execute(
       "SELECT id FROM members WHERE id = ? FOR UPDATE",
       [memberId]
@@ -149,6 +172,7 @@ const assignMember = async (ministryId, memberId, assignmentRole = "Member") => 
     }
 
     await connection.commit();
+
     return { ministryId, memberId, assignmentRole };
   } catch (error) {
     await connection.rollback();
@@ -208,7 +232,10 @@ const moveMember = async (fromMinistryId, toMinistryId, memberId) => {
     const source = ministries.find((item) => item.id === fromMinistryId);
     const target = ministries.find((item) => item.id === toMinistryId);
 
-    if (!source || !target) throw httpError("Ministry not found.", 404);
+    if (!source || !target) {
+      throw httpError("Ministry not found.", 404);
+    }
+
     if (target.status !== "Active") {
       throw httpError("Cannot move a member to an inactive ministry.");
     }
@@ -266,6 +293,7 @@ const moveMember = async (fromMinistryId, toMinistryId, memberId) => {
     }
 
     await connection.commit();
+
     return { memberId, fromMinistryId, toMinistryId };
   } catch (error) {
     await connection.rollback();
@@ -277,8 +305,135 @@ const moveMember = async (fromMinistryId, toMinistryId, memberId) => {
 
 const getLeaderMinistries = async (userId) => {
   userId = validateId(userId, "User ID");
-
   return ministryModel.getLeaderMinistries(userId);
+};
+
+// Authorization helper for every Ministry Leader-only operation.
+const assertLeaderAccess = async (userId, ministryId) => {
+  userId = validateId(userId, "User ID");
+  ministryId = validateId(ministryId, "Ministry ID");
+
+  const isLeader = await ministryModel.isLeaderOfMinistry(
+    userId,
+    ministryId
+  );
+
+  if (!isLeader) {
+    throw httpError(
+      "You are not authorized to manage this ministry.",
+      403
+    );
+  }
+
+  return { userId, ministryId };
+};
+
+const getLeaderMembers = async (ministryId, userId, status = "Active") => {
+  const access = await assertLeaderAccess(userId, ministryId);
+
+  if (!["Active", "Inactive", "All"].includes(status)) {
+    throw httpError("Status must be Active, Inactive, or All.");
+  }
+
+  return ministryModel.getMinistryMembers(
+    access.ministryId,
+    "",
+    status
+  );
+};
+
+const updateLeaderMinistry = async (
+  ministryId,
+  userId,
+  { name, description }
+) => {
+  const access = await assertLeaderAccess(userId, ministryId);
+
+  if (typeof name !== "string" || !name.trim()) {
+    throw httpError("Ministry name is required.");
+  }
+
+  if (name.trim().length > 100) {
+    throw httpError("Ministry name cannot exceed 100 characters.");
+  }
+
+  return ministryModel.updateLeaderMinistry(access.ministryId, {
+    name: name.trim(),
+    description:
+      typeof description === "string" ? description.trim() : "",
+  });
+};
+
+const assignLeaderMember = async (ministryId, userId, memberId) => {
+  const access = await assertLeaderAccess(userId, ministryId);
+
+  // Leaders can assign existing members, but cannot appoint other leaders.
+  return assignMember(access.ministryId, memberId, "Member");
+};
+
+const removeLeaderAssignment = async (ministryId, userId, memberId) => {
+  const access = await assertLeaderAccess(userId, ministryId);
+  memberId = validateId(memberId, "Member ID");
+
+  const assignment = await ministryModel.getMinistryAssignment(
+    access.ministryId,
+    memberId
+  );
+
+  if (!assignment || assignment.status !== "Active") {
+    throw httpError("Active ministry assignment not found.", 404);
+  }
+
+  if (assignment.assignment_role !== "Member") {
+    throw httpError(
+      "Ministry Leaders cannot remove another person's leadership assignment.",
+      403
+    );
+  }
+
+  return removeAssignment(access.ministryId, memberId);
+};
+
+const updateLeaderAssignmentStatus = async (
+  ministryId,
+  userId,
+  memberId,
+  status
+) => {
+  const access = await assertLeaderAccess(userId, ministryId);
+  memberId = validateId(memberId, "Member ID");
+
+  if (!["Active", "Inactive"].includes(status)) {
+    throw httpError("Status must be Active or Inactive.");
+  }
+
+  const assignment = await ministryModel.getMinistryAssignment(
+    access.ministryId,
+    memberId
+  );
+
+  if (!assignment) {
+    throw httpError("Ministry assignment not found.", 404);
+  }
+
+  if (assignment.assignment_role !== "Member") {
+    throw httpError(
+      "Ministry Leaders cannot change another person's leadership assignment.",
+      403
+    );
+  }
+
+  if (assignment.status === status) {
+    throw httpError(`This assignment is already ${status.toLowerCase()}.`);
+  }
+
+  if (status === "Active") {
+    // Existing assignMember logic checks the ministry and member eligibility,
+    // then safely reactivates the previous assignment.
+    return assignMember(access.ministryId, memberId, "Member");
+  }
+
+  return removeAssignment(access.ministryId, memberId);
 };
 
 module.exports = {
@@ -292,4 +447,9 @@ module.exports = {
   removeAssignment,
   moveMember,
   getLeaderMinistries,
+  getLeaderMembers,
+  updateLeaderMinistry,
+  assignLeaderMember,
+  removeLeaderAssignment,
+  updateLeaderAssignmentStatus,
 };

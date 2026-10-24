@@ -46,6 +46,7 @@ const getById = async (req, res) => {
 const create = async (req, res) => {
   try {
     const data = await ministryService.createMinistry(req.body);
+
     return res.status(201).json({
       success: true,
       message: "Ministry created successfully.",
@@ -160,16 +161,106 @@ const moveMember = async (req, res) => {
   }
 };
 
-
 const getMyMinistries = async (req, res) => {
   try {
-    const data = await ministryService.getLeaderMinistries(
-      req.user.id
-    );
+    const data = await ministryService.getLeaderMinistries(req.user.id);
 
     return res.json({
       success: true,
       message: "Your ministries retrieved successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+// Ministry Leader-only endpoints
+
+const getLeaderMembers = async (req, res) => {
+  try {
+    const data = await ministryService.getLeaderMembers(
+      req.params.id,
+      req.user.id,
+      String(req.query.status || "Active")
+    );
+
+    return res.json({
+      success: true,
+      message: "Your ministry members retrieved successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+const updateLeaderMinistry = async (req, res) => {
+  try {
+    const data = await ministryService.updateLeaderMinistry(
+      req.params.id,
+      req.user.id,
+      req.body
+    );
+
+    return res.json({
+      success: true,
+      message: "Your ministry details updated successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+const assignLeaderMember = async (req, res) => {
+  try {
+    const data = await ministryService.assignLeaderMember(
+      req.params.id,
+      req.user.id,
+      req.body.memberId
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Member added to your ministry successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+const removeLeaderAssignment = async (req, res) => {
+  try {
+    const data = await ministryService.removeLeaderAssignment(
+      req.params.id,
+      req.user.id,
+      req.params.memberId
+    );
+
+    return res.json({
+      success: true,
+      message: "Member removed from your ministry successfully.",
+      data,
+    });
+  } catch (error) {
+    return sendError(res, error);
+  }
+};
+
+const updateLeaderAssignmentStatus = async (req, res) => {
+  try {
+    const data = await ministryService.updateLeaderAssignmentStatus(
+      req.params.id,
+      req.user.id,
+      req.params.memberId,
+      req.body.status
+    );
+
+    return res.json({
+      success: true,
+      message: "Member assignment status updated successfully.",
       data,
     });
   } catch (error) {
@@ -188,4 +279,9 @@ module.exports = {
   removeAssignment,
   moveMember,
   getMyMinistries,
+  getLeaderMembers,
+  updateLeaderMinistry,
+  assignLeaderMember,
+  removeLeaderAssignment,
+  updateLeaderAssignmentStatus,
 };
