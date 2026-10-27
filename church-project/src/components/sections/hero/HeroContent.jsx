@@ -1,21 +1,26 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import HeroGreeting from "./HeroGreeting";
 import HeroActions from "./HeroActions";
 import heroContent from "@/data/heroContent";
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.15, delayChildren: 0.15 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 22 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
-};
-
 const HeroContent = () => {
+  const reduce = useReducedMotion();
+
+  const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.15, delayChildren: 0.1 } },
+  };
+  const item = {
+    hidden: { opacity: 0, y: reduce ? 0 : 22 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: reduce ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] },
+    },
+  };
+
   return (
     <motion.div
       variants={container}
@@ -47,6 +52,20 @@ const HeroContent = () => {
       <motion.div variants={item}>
         <HeroActions />
       </motion.div>
+
+      {heroContent.facts?.length > 0 && (
+        <motion.ul
+          variants={item}
+          className="mt-10 flex flex-wrap gap-x-6 gap-y-2 border-t border-primary/15 pt-5 text-sm text-body"
+        >
+          {heroContent.facts.map((fact) => (
+            <li key={fact} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" />
+              {fact}
+            </li>
+          ))}
+        </motion.ul>
+      )}
     </motion.div>
   );
 };

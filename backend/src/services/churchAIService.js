@@ -1,4 +1,3 @@
-
 const churchAIModel = require("../models/churchAIModel");
 
 const ALLOWED_ROLES = new Set([
@@ -66,13 +65,20 @@ async function getContext(question, authenticatedUser) {
   const isLeader = access.roleName === "Ministry Leader";
   const isMember = access.roleName === "Member";
 
+  // Updated membership, ministry, and role-permission access rules.
   const canViewMembership =
-    isAdmin || permissions.has("manage_members");
+    isAdmin ||
+    (isPastor && permissions.has("manage_members"));
 
   const canViewMinistries =
     isAdmin ||
-    permissions.has("manage_ministries") ||
-    (!isLeader && permissions.has("view_dashboard"));
+    (
+      (isPastor || isElder) &&
+      (
+        permissions.has("manage_ministries") ||
+        permissions.has("view_dashboard")
+      )
+    );
 
   const canViewRolePermissions =
     isAdmin || permissions.has("manage_roles");
@@ -409,8 +415,41 @@ async function getContext(question, authenticatedUser) {
 
   /*
    * Ministry assignment trends.
+   *
+   * Admins can access ministry trends.
+   * Pastors and Elders require the relevant permissions.
+   * Ministry Leaders can access trends only for their own
+   * matched, assigned ministries.
    */
-  if (ministry && asksForTrends && canViewMinistries) {
+  const canViewSelectedMinistryTrends =
+    Boolean(
+      ministry &&
+      (
+        isAdmin ||
+        (
+          isPastor &&
+          (
+            permissions.has("manage_ministries") ||
+            permissions.has("view_dashboard")
+          )
+        ) ||
+        (
+          isElder &&
+          (
+            permissions.has("manage_ministries") ||
+            permissions.has("view_dashboard")
+          )
+        ) ||
+        (
+          isLeader &&
+          leaderMinistries.some(
+            (item) => Number(item.id) === Number(ministry.id)
+          )
+        )
+      )
+    );
+
+  if (canViewSelectedMinistryTrends && asksForTrends) {
     context.assignmentHistory =
       await churchAIModel.getAssignmentHistory(ministry.id);
 

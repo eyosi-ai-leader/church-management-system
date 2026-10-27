@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import clsx from "clsx";
 import Logo from "./logo";
 import DesktopNav from "./desktopnav";
 import MobileNav from "./mobile-navbar";
+import GiveModal from "./give-modal";
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
+  const [giveOpen, setGiveOpen] = useState(false);
+
+  const openGive = useCallback(() => setGiveOpen(true), []);
+  const closeGive = useCallback(() => setGiveOpen(false), []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 12);
@@ -25,9 +30,11 @@ const Navbar = () => {
         )}
       >
         <Logo />
-        <DesktopNav />
-        <MobileNav />
+        <DesktopNav onGive={openGive} />
+        <MobileNav onGive={openGive} />
       </div>
+
+      <GiveModal open={giveOpen} onClose={closeGive} />
     </header>
   );
 };

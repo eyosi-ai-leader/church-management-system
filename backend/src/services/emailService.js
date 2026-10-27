@@ -1,54 +1,78 @@
-
 const nodemailer = require("nodemailer");
-const env = require("../config/env");
 
-const transporter = nodemailer.createTransport({
-  host: env.EMAIL_HOST,
-  port: Number(env.EMAIL_PORT),
-  secure: Number(env.EMAIL_PORT) === 465,
-  auth: {
-    user: env.EMAIL_USER,
-    pass: env.EMAIL_PASSWORD,
-  },
-});
+let transporter = null;
 
-/**
- * Verify the SMTP connection.
- *
- * This can be used during development to confirm
- * that the email configuration is working.
- */
-const verifyEmailConnection = async () => {
-  await transporter.verify();
-  return true;
-};
+function getTransporter() {
+  if (transporter) return transporter;
 
-/**
- * Send an email.
- */
-const sendEmail = async ({
-  to,
-  subject,
-  text,
-  html,
-}) => {
-  if (!to) {
-    throw new Error("Recipient email is required.");
+  const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASSWORD } = process.env;
+  if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASSWORD) return null;
+
+  const port = Number(EMAIL_PORT) || 465;
+
+  transporter = nodemailer.createTransport({
+    host: EMAIL_HOST,
+    port,
+    secure: port === 465,
+    auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+    connectionTimeout: 10000,
+    greetTimeout: 10000,
+    socketTimeout: 15000,
+  });
+
+  return transporter;
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendPrayerRequestNotification(request) {
+  const mailer = getTransporter();
+  const to = process.env.PRAYER_REQUEST_RECIPIENT;
+
+  if (!mailer || !to) {
+    throw new Error("Email is not configured.");
   }
 
-  const mailOptions = {
-    from: env.EMAIL_FROM || env.EMAIL_USER,
+  const text = [
+    "A new prayer request was submitted on the church website.",
+    "",
+    `Name: ${request.name}`,
+    `Email: ${request.email}`,
+    `Phone: ${request.phone || "Not provided"}`,
+    "",
+    "Request:",
+    request.message,
+    "",
+    `Reference: #${request.id}`,
+  ].join("\n");
+
+  const html = `
+    <p>A new prayer request was submitted on the church website.</p>
+    <p>
+      <strong>Name:</strong> ${escapeHtml(request.name)}<br>
+      <strong>Email:</strong> ${escapeHtml(request.email)}<br>
+      <strong>Phone:</strong> ${escapeHtml(request.phone || "Not provided")}
+    </p>
+    <p><strong>Request:</strong></p>
+    <p style="white-space:pre-wrap">${escapeHtml(request.message)}</p>
+    <p style="color:#666">Reference: #${request.id}</p>
+  `;
+
+  await mailer.sendMail({
+    from: { name: "Church Website", address: process.env.EMAIL_USER },
     to,
-    subject,
+    replyTo: { name: request.name, address: request.email },
+    subject: `New prayer request #${request.id}`,
     text,
     html,
-  };
+  });
+}
 
-  return transporter.sendMail(mailOptions);
-};
-
-module.exports = {
-  sendEmail,
-  verifyEmailConnection,
-};
-
+module.exports = { sendPrayerRequestNotification };
