@@ -10,6 +10,11 @@ const {
 } = require("../controllers/authController");
 
 const {
+  forgotPassword,
+  resetPassword,
+} = require("../controllers/passwordResetController");
+
+const {
   uploadProfileImage,
 } = require("../middleware/uploadMiddleware");
 
@@ -26,6 +31,11 @@ const {
   resendVerificationValidator,
 } = require("../validators/emailVerificationValidator");
 
+const {
+  forgotPasswordValidator,
+  resetPasswordValidator,
+} = require("../validators/passwordResetValidator");
+
 const limiter = (windowMs, limit) =>
   rateLimit({
     windowMs,
@@ -41,6 +51,8 @@ const limiter = (windowMs, limit) =>
 
 const verifyLimiter = limiter(15 * 60 * 1000, 10);
 const resendLimiter = limiter(60 * 60 * 1000, 5);
+const forgotLimiter = limiter(60 * 60 * 1000, 5);
+const resetLimiter = limiter(15 * 60 * 1000, 10);
 
 router.get(
   "/profile",
@@ -92,6 +104,20 @@ router.post(
   resendLimiter,
   resendVerificationValidator,
   resendVerification
+);
+
+router.post(
+  "/forgot-password",
+  forgotLimiter,
+  forgotPasswordValidator,
+  forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  resetLimiter,
+  resetPasswordValidator,
+  resetPassword
 );
 
 module.exports = router;
