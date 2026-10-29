@@ -236,7 +236,7 @@ export default function RegisterForm() {
         );
       }
 
-      const result =
+         const result =
         await registerUser(data);
 
       const memberNumber =
@@ -250,8 +250,20 @@ export default function RegisterForm() {
         );
       }
 
+      // Send the new member to enter the 6-digit code.
+      // "sent=1" starts the 60-second resend timer, because the
+      // code was only just emailed. If the code email failed,
+      // leave it out so they can resend straight away.
+      const codeEmailFailed = (result?.message || "")
+        .toLowerCase()
+        .includes("could not be sent");
+
+      const verifyEmail = formData.email.trim().toLowerCase();
+
       router.push(
-        "/login?registered=true"
+        `/verify-email?email=${encodeURIComponent(verifyEmail)}${
+          codeEmailFailed ? "" : "&sent=1"
+        }`
       );
     } catch (error) {
       setSubmitError(

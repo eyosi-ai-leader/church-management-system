@@ -5,23 +5,12 @@ const {
 const memberService = require("./memberService");
 
 const {
-  TOKEN_TYPES,
-  createAccountToken,
-} = require("./accountTokenService");
+  sendVerificationCode,
+} = require("./emailVerificationService");
 
 const {
-  sendEmail,
-} = require("./emailService");
-
-const verificationEmail = require(
-  "../templates/emails/verificationEmail"
-);
-
-const welcomeEmail = require(
-  "../templates/emails/welcomeEmail"
-);
-
-const env = require("../config/env");
+  isEmailVerified,
+} = require("../models/userVerificationModel");
 
 /**
  * Register a new public church member.
@@ -32,9 +21,8 @@ const env = require("../config/env");
  * - password is hashed inside memberService
  * - profile image is handled by memberService
  * - users + members are created together
- * - email verification token is created after account creation
- * - verification email is sent after token creation
- * - welcome email is sent in the background
+ * - a 6-digit verification code is emailed after account creation
+ * - the account cannot log in until the code is confirmed
  */
 const registerUser = async (
   userData,
@@ -88,70 +76,27 @@ const registerUser = async (
       profileImage
     );
 
-  const verificationToken =
-    await createAccountToken(
-      result.userId,
-      TOKEN_TYPES.EMAIL_VERIFICATION
-    );
-
-  const verificationUrl =
-    `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(
-      verificationToken.token
-    )}`;
-
-  const emailContent =
-    verificationEmail({
-      firstName,
-      verificationUrl,
-    });
-
-  /*
-   * The account already exists. An email failure must NOT
-   * make registration appear to have failed.
-   */
   let verificationEmailSent = true;
 
   try {
-    await sendEmail({
-      to: email,
-      subject: emailContent.subject,
-      text: emailContent.text,
-      html: emailContent.html,
+    await sendVerificationCode({
+      id: result.userId,
+      firstName,
+      email,
     });
   } catch (error) {
     verificationEmailSent = false;
 
     console.error(
-      "Failed to send verification email:",
+      "Failed to send verification code:",
       error.message
     );
   }
 
-  /*
-   * Welcome email: background only (not awaited), so the
-   * visitor never waits for it and a failure never breaks signup.
-   */
-  const welcomeContent = welcomeEmail({
-    firstName,
-    loginUrl: `${env.FRONTEND_URL}/login`,
-  });
-
-  sendEmail({
-    to: email,
-    subject: welcomeContent.subject,
-    text: welcomeContent.text,
-    html: welcomeContent.html,
-  }).catch((error) => {
-    console.error(
-      "Failed to send welcome email:",
-      error.message
-    );
-  });
-
   return {
     message: verificationEmailSent
-      ? "Registration successful. Please check your email to verify your account."
-      : "Registration successful, but the verification email could not be sent. Please request a new verification email.",
+      ? "Registration successful. We sent a 6-digit verification code to your email."
+      : "Registration successful, but the verification code could not be sent. Please request a new code.",
     verificationEmailSent,
     user: {
       firstName,
@@ -196,6 +141,22 @@ const loginUser = async (
     throw new Error(
       "Invalid email or password"
     );
+  }
+
+  /*
+   * The password is correct, but the email must be confirmed
+   * with the 6-digit code before the account can be used.
+   */
+  const verified = await isEmailVerified(user.id);
+
+  if (!verified) {
+    const error = new Error(
+      "Please verify your email before signing in."
+    );
+
+    error.statusCode = 403;
+
+    throw error;
   }
 
   const {

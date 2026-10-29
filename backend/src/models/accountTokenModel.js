@@ -1,8 +1,5 @@
 const db = require("../config/db");
 
-/**
- * Create a new account token.
- */
 const createToken = async ({
   userId,
   tokenHash,
@@ -25,9 +22,6 @@ const createToken = async ({
   return result.insertId;
 };
 
-/**
- * Find an unused token by its hash.
- */
 const findValidToken = async (tokenHash, type) => {
   const [rows] = await db.execute(
     `
@@ -53,8 +47,46 @@ const findValidToken = async (tokenHash, type) => {
 };
 
 /**
- * Mark a token as used.
+ * Find the newest unused, unexpired token for a user.
+ * Used for one-time codes, where the user supplies an email
+ * and a code instead of a long token.
  */
+const findLatestActiveTokenByUser = async (userId, type) => {
+  const [rows] = await db.execute(
+    `
+      SELECT
+        id,
+        user_id,
+        token_hash,
+        type,
+        expires_at,
+        attempts,
+        TIMESTAMPDIFF(SECOND, created_at, NOW()) AS age_seconds
+      FROM account_tokens
+      WHERE user_id = ?
+        AND type = ?
+        AND used_at IS NULL
+        AND expires_at > NOW()
+      ORDER BY id DESC
+      LIMIT 1
+    `,
+    [userId, type]
+  );
+
+  return rows[0] || null;
+};
+
+const incrementTokenAttempts = async (tokenId) => {
+  await db.execute(
+    `
+      UPDATE account_tokens
+      SET attempts = attempts + 1
+      WHERE id = ?
+    `,
+    [tokenId]
+  );
+};
+
 const markTokenAsUsed = async (tokenId) => {
   const [result] = await db.execute(
     `
@@ -69,13 +101,6 @@ const markTokenAsUsed = async (tokenId) => {
   return result.affectedRows > 0;
 };
 
-/**
- * Delete all existing unused tokens of a specific type
- * for a user.
- *
- * This is useful when issuing a new verification,
- * invitation, or password-reset token.
- */
 const deleteUnusedTokensByUserAndType = async (userId, type) => {
   const [result] = await db.execute(
     `
@@ -90,11 +115,6 @@ const deleteUnusedTokensByUserAndType = async (userId, type) => {
   return result.affectedRows;
 };
 
-/**
- * Delete expired tokens.
- *
- * This can later be used by a scheduled cleanup job.
- */
 const deleteExpiredTokens = async () => {
   const [result] = await db.execute(
     `
@@ -110,8 +130,9 @@ const deleteExpiredTokens = async () => {
 module.exports = {
   createToken,
   findValidToken,
+  findLatestActiveTokenByUser,
+  incrementTokenAttempts,
   markTokenAsUsed,
   deleteUnusedTokensByUserAndType,
   deleteExpiredTokens,
 };
-

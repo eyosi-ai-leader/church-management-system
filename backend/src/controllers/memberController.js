@@ -1,4 +1,5 @@
 const memberService = require("../services/memberService");
+const { markEmailVerified } = require("../models/userVerificationModel");
 
 const {
   successResponse,
@@ -197,6 +198,7 @@ const createMember = async (req, res) => {
         req.file || null
       );
 
+       await markEmailVerified(result.userId);
     return successResponse(
       res,
       "Member created successfully",

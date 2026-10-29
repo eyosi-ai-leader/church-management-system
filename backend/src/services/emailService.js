@@ -32,11 +32,38 @@ function escapeHtml(value = "") {
     .replace(/'/g, "&#39;");
 }
 
-async function sendPrayerRequestNotification(request) {
+/**
+ * Generic email sender used by registration, verification,
+ * welcome, and password-reset emails.
+ */
+async function sendEmail({ to, subject, text, html, replyTo }) {
   const mailer = getTransporter();
+
+  if (!mailer) {
+    throw new Error("Email is not configured.");
+  }
+
+  if (!to || !subject) {
+    throw new Error("Email recipient and subject are required.");
+  }
+
+  return mailer.sendMail({
+    from: {
+      name: process.env.EMAIL_FROM_NAME || "Church Website",
+      address: process.env.EMAIL_USER,
+    },
+    to,
+    subject,
+    text,
+    html,
+    ...(replyTo ? { replyTo } : {}),
+  });
+}
+
+async function sendPrayerRequestNotification(request) {
   const to = process.env.PRAYER_REQUEST_RECIPIENT;
 
-  if (!mailer || !to) {
+  if (!to) {
     throw new Error("Email is not configured.");
   }
 
@@ -65,14 +92,13 @@ async function sendPrayerRequestNotification(request) {
     <p style="color:#666">Reference: #${request.id}</p>
   `;
 
-  await mailer.sendMail({
-    from: { name: "Church Website", address: process.env.EMAIL_USER },
+  await sendEmail({
     to,
-    replyTo: { name: request.name, address: request.email },
     subject: `New prayer request #${request.id}`,
     text,
     html,
+    replyTo: { name: request.name, address: request.email },
   });
 }
 
-module.exports = { sendPrayerRequestNotification };
+module.exports = { sendEmail, sendPrayerRequestNotification };

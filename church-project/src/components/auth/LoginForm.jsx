@@ -53,7 +53,17 @@ export default function LoginForm() {
       // 6. Go to dashboard
       router.push("/dashboard");
     } catch (error) {
-      setError(error.message || "Unable to sign in.");
+      const message = error.message || "Unable to sign in.";
+
+      // Unverified account: send the person to the code page.
+      if (message.toLowerCase().includes("verify your email")) {
+        router.push(
+          `/verify-email?email=${encodeURIComponent(email.trim())}`
+        );
+        return;
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
