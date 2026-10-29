@@ -17,6 +17,10 @@ const verificationEmail = require(
   "../templates/emails/verificationEmail"
 );
 
+const welcomeEmail = require(
+  "../templates/emails/welcomeEmail"
+);
+
 const env = require("../config/env");
 
 /**
@@ -30,6 +34,7 @@ const env = require("../config/env");
  * - users + members are created together
  * - email verification token is created after account creation
  * - verification email is sent after token creation
+ * - welcome email is sent in the background
  */
 const registerUser = async (
   userData,
@@ -61,14 +66,6 @@ const registerUser = async (
     throw error;
   }
 
-  /*
-   * Create User + Member.
-   *
-   * memberService handles:
-   * - password hashing
-   * - profile image upload
-   * - database transaction
-   */
   const result =
     await memberService.createMember(
       {
@@ -91,32 +88,17 @@ const registerUser = async (
       profileImage
     );
 
-  /*
-   * Create secure email verification token.
-   *
-   * The accountTokenService:
-   * - generates the raw token
-   * - hashes it
-   * - stores only the hash
-   * - sets the expiration
-   */
   const verificationToken =
     await createAccountToken(
       result.userId,
       TOKEN_TYPES.EMAIL_VERIFICATION
     );
 
-  /*
-   * Build the frontend verification URL.
-   */
   const verificationUrl =
     `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(
       verificationToken.token
     )}`;
 
-  /*
-   * Build verification email.
-   */
   const emailContent =
     verificationEmail({
       firstName,
@@ -124,12 +106,8 @@ const registerUser = async (
     });
 
   /*
-   * Send verification email.
-   *
-   * Important:
-   * The account has already been successfully created.
-   * Therefore, an email delivery failure should NOT make
-   * registration appear to have failed.
+   * The account already exists. An email failure must NOT
+   * make registration appear to have failed.
    */
   let verificationEmailSent = true;
 
@@ -148,6 +126,27 @@ const registerUser = async (
       error.message
     );
   }
+
+  /*
+   * Welcome email: background only (not awaited), so the
+   * visitor never waits for it and a failure never breaks signup.
+   */
+  const welcomeContent = welcomeEmail({
+    firstName,
+    loginUrl: `${env.FRONTEND_URL}/login`,
+  });
+
+  sendEmail({
+    to: email,
+    subject: welcomeContent.subject,
+    text: welcomeContent.text,
+    html: welcomeContent.html,
+  }).catch((error) => {
+    console.error(
+      "Failed to send welcome email:",
+      error.message
+    );
+  });
 
   return {
     message: verificationEmailSent
