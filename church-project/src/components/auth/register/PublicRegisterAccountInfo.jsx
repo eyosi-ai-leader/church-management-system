@@ -7,6 +7,8 @@ import {
 
 import { useState } from "react";
 
+import PasswordRequirements from "@/components/shared/Password/PasswordRequirements";
+
 export default function PublicRegisterAccountInfo({
   formData,
   errors,
@@ -53,7 +55,7 @@ export default function PublicRegisterAccountInfo({
               name="password"
               value={formData.password}
               onChange={onChange}
-              placeholder="Minimum 8 characters"
+              placeholder="Create a strong password"
               autoComplete="new-password"
               className={`w-full rounded-lg border px-3 py-2.5 pr-11 text-sm outline-none transition focus:ring-2 ${
                 errors.password
@@ -61,7 +63,7 @@ export default function PublicRegisterAccountInfo({
                   : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"
               }`}
             />
-
+      
             <button
               type="button"
               onClick={() =>
@@ -89,6 +91,8 @@ export default function PublicRegisterAccountInfo({
               {errors.password}
             </p>
           )}
+
+                    <PasswordRequirements password={formData.password} id="register-password-requirements" />
         </div>
 
         <div>

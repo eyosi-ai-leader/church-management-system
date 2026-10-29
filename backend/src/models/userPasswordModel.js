@@ -14,6 +14,21 @@ const updatePassword = async (userId, hashedPassword) => {
   return result.affectedRows > 0;
 };
 
+const getPasswordHashById = async (userId) => {
+  const [rows] = await db.execute(
+    `
+      SELECT password, first_name, email
+      FROM users
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  return rows[0] || null;
+};
+
 module.exports = {
   updatePassword,
+  getPasswordHashById,
 };

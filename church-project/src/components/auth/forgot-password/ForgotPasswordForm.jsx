@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 
 import { requestPasswordReset, resetPassword } from "@/lib/passwordApi";
+   import PasswordRequirements from "@/components/shared/Password/PasswordRequirements";
+   import {
+     PASSWORD_RULES_MESSAGE,
+     isStrongPassword,
+   } from "@/lib/passwordPolicy";
 
 const RESEND_SECONDS = 60;
 
@@ -138,10 +143,10 @@ export default function ForgotPasswordForm() {
     setError("");
     setMessage("");
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
+          if (!isStrongPassword(password)) {
+         setError(PASSWORD_RULES_MESSAGE);
+         return;
+       }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -256,7 +261,8 @@ export default function ForgotPasswordForm() {
             show={showPassword}
             onToggle={() => setShowPassword((value) => !value)}
           />
-
+          
+          <PasswordRequirements password={password} id="reset-password-requirements" />
           <PasswordField
             id="confirm-password"
             label="Confirm new password"

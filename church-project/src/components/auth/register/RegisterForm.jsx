@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+   import {
+     PASSWORD_RULES_MESSAGE,
+     isStrongPassword,
+   } from "@/lib/passwordPolicy";
 
 import RegisterHeader from "./RegisterHeader";
 import PublicRegisterProfileImage from "./PublicRegisterProfileImage";
@@ -11,6 +15,7 @@ import PublicRegisterPersonalInfo from "./PublicRegisterPersonalInfo";
 import PublicRegisterContactInfo from "./PublicRegisterContactInfo";
 import PublicRegisterChurchInfo from "./PublicRegisterChurchInfo";
 import PublicRegisterAccountInfo from "./PublicRegisterAccountInfo";
+
 
 import { registerUser } from "@/lib/authApi";
 
@@ -90,12 +95,9 @@ export default function RegisterForm() {
         "Please enter a valid email.";
     }
 
-    if (
-      formData.password.length < 8
-    ) {
-      newErrors.password =
-        "Password must be at least 8 characters.";
-    }
+          if (!isStrongPassword(formData.password)) {
+         newErrors.password = PASSWORD_RULES_MESSAGE;
+       }
 
     if (
       !formData.confirmPassword

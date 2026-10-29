@@ -15,6 +15,10 @@ const {
 } = require("../controllers/passwordResetController");
 
 const {
+  changePassword,
+} = require("../controllers/changePasswordController");
+
+const {
   uploadProfileImage,
 } = require("../middleware/uploadMiddleware");
 
@@ -36,12 +40,17 @@ const {
   resetPasswordValidator,
 } = require("../validators/passwordResetValidator");
 
-const limiter = (windowMs, limit) =>
+const {
+  changePasswordValidator,
+} = require("../validators/changePasswordValidator");
+
+const limiter = (windowMs, limit, keyGenerator) =>
   rateLimit({
     windowMs,
     limit,
     standardHeaders: true,
     legacyHeaders: false,
+    ...(keyGenerator ? { keyGenerator } : {}),
     handler: (req, res) =>
       res.status(429).json({
         success: false,
@@ -53,6 +62,10 @@ const verifyLimiter = limiter(15 * 60 * 1000, 10);
 const resendLimiter = limiter(60 * 60 * 1000, 5);
 const forgotLimiter = limiter(60 * 60 * 1000, 5);
 const resetLimiter = limiter(15 * 60 * 1000, 10);
+// Counted per signed-in user (authMiddleware runs first).
+const changePasswordLimiter = limiter(15 * 60 * 1000, 5, (req) =>
+  `user-${req.user.id}`
+);
 
 router.get(
   "/profile",
@@ -118,6 +131,14 @@ router.post(
   resetLimiter,
   resetPasswordValidator,
   resetPassword
+);
+
+router.post(
+  "/change-password",
+  authMiddleware,
+  changePasswordLimiter,
+  changePasswordValidator,
+  changePassword
 );
 
 module.exports = router;

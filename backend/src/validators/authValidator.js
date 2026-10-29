@@ -1,5 +1,10 @@
 const { body } = require("express-validator");
 
+const {
+  PASSWORD_RULES_MESSAGE,
+  isStrongPassword,
+} = require("../utils/passwordPolicy");
+
 const registerValidator = [
   body("firstName")
     .trim()
@@ -101,15 +106,13 @@ const registerValidator = [
       "Address must not exceed 500 characters"
     ),
 
-  body("password")
-    .notEmpty()
-    .withMessage("Password is required")
-    .isLength({
-      min: 8,
-    })
-    .withMessage(
-      "Password must be at least 8 characters"
-    ),
+  body("password").custom((value) => {
+    if (!isStrongPassword(value)) {
+      throw new Error(PASSWORD_RULES_MESSAGE);
+    }
+
+    return true;
+  }),
 
   body("confirmPassword")
     .notEmpty()
