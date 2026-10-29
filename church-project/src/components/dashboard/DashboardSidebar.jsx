@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getStoredUser } from "@/lib/userStorage";
+import UserAvatar from "@/components/shared/Avatar/UserAvatar";
 
 import {
   LayoutDashboard,
@@ -251,12 +253,6 @@ const navigationByRole = {
       label: "My Church",
       items: [
         {
-          name: "My Profile",
-          href: "/dashboard/profile",
-          icon: UserRound,
-          comingSoon: true,
-        },
-        {
           name: "My Ministry",
           href: "/dashboard/my-ministry",
           icon: Church,
@@ -291,6 +287,11 @@ const navigationByRole = {
 };
 
 const bottomNavigation = [
+  {
+    name: "My Profile",
+    href: "/dashboard/profile",
+    icon: UserRound,
+  },
   {
     name: "Settings",
     href: "/dashboard/settings",
@@ -337,20 +338,13 @@ export default function DashboardSidebar() {
   const [user, setUser] = useState(null);
   const [openSections, setOpenSections] = useState({});
 
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
+   useEffect(() => {
+    const load = () => setUser(getStoredUser());
 
-      if (!storedUser) {
-        return;
-      }
+    load();
+    window.addEventListener("chms:user-updated", load);
 
-      const parsedUser = JSON.parse(storedUser);
-
-      setUser(parsedUser);
-    } catch (error) {
-      console.error("Failed to load sidebar user:", error);
-    }
+    return () => window.removeEventListener("chms:user-updated", load);
   }, []);
 
   const roleId = Number(user?.roleId);
@@ -642,9 +636,7 @@ export default function DashboardSidebar() {
             type="button"
             className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-slate-100"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white shadow-sm">
-              {getInitials()}
-            </div>
+                        <UserAvatar user={user} className="h-10 w-10 text-xs" />
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-slate-900">
@@ -663,7 +655,17 @@ export default function DashboardSidebar() {
           </button>
 
           {/* User Menu */}
+
+          
           <div className="pointer-events-none absolute bottom-full left-0 mb-2 w-full translate-y-2 rounded-xl border border-slate-200 bg-white p-1.5 opacity-0 shadow-xl transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+             <Link
+              href="/dashboard/profile"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            >
+              <UserRound size={16} />
+              My Profile
+            </Link>
+            
             <Link
               href="/dashboard/settings"
               className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"

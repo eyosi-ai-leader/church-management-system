@@ -1,15 +1,8 @@
+
+import { getToken } from "@/lib/authToken";
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
-function getToken() {
-  if (typeof document === "undefined") return null;
-
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("token="));
-
-  return match ? decodeURIComponent(match.split("=")[1]) : null;
-}
 
 export async function changePassword({
   currentPassword,
