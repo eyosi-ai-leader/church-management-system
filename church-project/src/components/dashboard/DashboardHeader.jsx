@@ -21,6 +21,7 @@ import {
   Megaphone,
   Activity,
   LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 
 import { getRoleName, ROLES } from "@/lib/roles";

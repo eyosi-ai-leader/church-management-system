@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, CheckCircle2, Loader2, Lock, Trash2 } from "lucide-react";
+import { Camera, Info, Loader2, Trash2 } from "lucide-react";
 import UserAvatar from "@/components/shared/Avatar/UserAvatar";
 import { updateMyProfile } from "@/lib/profileApi";
 import { updateStoredUser } from "@/lib/userStorage";
@@ -37,20 +37,7 @@ function Field({ id, label, required, children }) {
   );
 }
 
-function ReadOnly({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 break-words text-sm font-medium text-slate-800">
-        {value || "Not set"}
-      </p>
-    </div>
-  );
-}
-
-export default function ProfileForm({ profile, onSaved }) {
+export default function ProfileForm({ profile, onSaved, onCancel }) {
   const [form, setForm] = useState(toForm(profile));
   const [photo, setPhoto] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -58,14 +45,14 @@ export default function ProfileForm({ profile, onSaved }) {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
 
   const fileRef = useRef(null);
+  const firstNameRef = useRef(null);
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
-    setForm(toForm(profile));
-  }, [profile]);
+    firstNameRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -92,7 +79,6 @@ export default function ProfileForm({ profile, onSaved }) {
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
-    setSaved(false);
     setError("");
   }
 
@@ -113,7 +99,6 @@ export default function ProfileForm({ profile, onSaved }) {
     }
 
     setError("");
-    setSaved(false);
     setPhoto(file);
     setPreview(URL.createObjectURL(file));
     setRemovePhoto(false);
@@ -123,7 +108,16 @@ export default function ProfileForm({ profile, onSaved }) {
     setPhoto(null);
     setPreview(null);
     setRemovePhoto(Boolean(profile.profileImage));
-    setSaved(false);
+  }
+
+  function handleCancel() {
+    if (saving) return;
+
+    if (dirty && !window.confirm("Discard your changes?")) {
+      return;
+    }
+
+    onCancel();
   }
 
   async function handleSubmit(event) {
@@ -131,7 +125,6 @@ export default function ProfileForm({ profile, onSaved }) {
     if (saving || !dirty) return;
 
     setError("");
-    setSaved(false);
 
     if (form.firstName.trim().length < 2 || form.lastName.trim().length < 2) {
       setError("First and last name must be at least 2 characters.");
@@ -164,24 +157,12 @@ export default function ProfileForm({ profile, onSaved }) {
         profileImage: updated.profileImage,
       });
 
-      setPhoto(null);
-      setPreview(null);
-      setRemovePhoto(false);
       onSaved(updated);
-      setSaved(true);
     } catch (err) {
       setError(err.message || "We couldn't save your changes.");
-    } finally {
       setSaving(false);
     }
   }
-
-  const memberSince = profile.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-      })
-    : "";
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
@@ -194,31 +175,17 @@ export default function ProfileForm({ profile, onSaved }) {
         </div>
       )}
 
-      {saved && (
-        <div
-          role="status"
-          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-        >
-          <CheckCircle2 size={18} />
-          Your profile has been updated.
-        </div>
-      )}
-
       {/* Photo */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center gap-5 sm:flex-row">
           <UserAvatar user={avatarUser} className="h-24 w-24 text-2xl" />
 
           <div className="text-center sm:text-left">
-            <p className="text-lg font-semibold text-slate-900">
-              {`${form.firstName} ${form.lastName}`.trim() || "Your name"}
-            </p>
-            <p className="text-sm text-slate-500">
-              {profile.roleName}
-              {memberSince && ` · Joined ${memberSince}`}
+            <p className="text-sm font-semibold text-slate-900">
+              Profile photo
             </p>
 
-            <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
+            <div className="mt-3 flex flex-wrap justify-center gap-3 sm:justify-start">
               <input
                 ref={fileRef}
                 type="file"
@@ -265,6 +232,7 @@ export default function ProfileForm({ profile, onSaved }) {
         <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
           <Field id="firstName" label="First name" required>
             <input
+              ref={firstNameRef}
               id="firstName"
               name="firstName"
               value={form.firstName}
@@ -363,31 +331,22 @@ export default function ProfileForm({ profile, onSaved }) {
         </div>
       </section>
 
-      {/* Read-only */}
-      <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-        <div className="flex items-start gap-3">
-          <Lock size={18} className="mt-0.5 text-slate-400" aria-hidden="true" />
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Church record
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              These details are managed by the church office. Contact them if
-              something needs to change.
-            </p>
-          </div>
-        </div>
+      <p className="flex items-start gap-2 text-sm text-slate-500">
+        <Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+        Your email, role, member number and baptism date are managed by the
+        church office, so they can&apos;t be edited here.
+      </p>
 
-        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <ReadOnly label="Email" value={profile.email} />
-          <ReadOnly label="Member number" value={profile.memberNumber} />
-          <ReadOnly label="Role" value={profile.roleName} />
-          <ReadOnly label="Status" value={profile.status} />
-          <ReadOnly label="Baptism date" value={profile.baptismDate} />
-        </div>
-      </section>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          onClick={handleCancel}
+          disabled={saving}
+          className="rounded-xl border border-slate-300 bg-white px-8 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Cancel
+        </button>
 
-      <div className="flex justify-end">
         <button
           type="submit"
           disabled={saving || !dirty}
