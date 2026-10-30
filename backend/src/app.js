@@ -24,6 +24,8 @@ const prayerRequestRoutes = require("./routes/prayerRequestRoutes");
 
 const profileRoutes = require("./routes/profileRoutes");
 
+const announcementRoutes = require("./routes/announcementRoutes");
+
 const app = express();
 
 // Security
@@ -71,6 +73,8 @@ app.use("/api/church-ai", churchAIRoutes);
 app.use("/api/prayer-requests", prayerRequestRoutes);
 
 app.use("/api/profile", profileRoutes);
+
+app.use("/api/announcements", announcementRoutes);
 /**
  * Global Error Handler
  *

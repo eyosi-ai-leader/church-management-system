@@ -15,9 +15,15 @@ function getTransporter() {
     port,
     secure: port === 465,
     auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
-    connectionTimeout: 10000,
-    greetTimeout: 10000,
-    socketTimeout: 15000,
+
+    // Reuse one connection instead of logging in for every email.
+    pool: true,
+    maxConnections: 1,
+    maxMessages: 100,
+
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
   });
 
   return transporter;
@@ -34,7 +40,7 @@ function escapeHtml(value = "") {
 
 /**
  * Generic email sender used by registration, verification,
- * welcome, and password-reset emails.
+ * welcome, password-reset and announcement emails.
  */
 async function sendEmail({ to, subject, text, html, replyTo }) {
   const mailer = getTransporter();

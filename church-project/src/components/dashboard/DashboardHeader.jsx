@@ -137,6 +137,10 @@ const quickActionsByRole = {
       href: "/dashboard/events",
       icon: CalendarDays,
     },
+        { name: "Announcements",
+           href: "/dashboard/announcements",
+            icon: Megaphone
+           },
   ],
 
   [ROLES.PASTOR]: [
@@ -155,6 +159,7 @@ const quickActionsByRole = {
       href: "/dashboard/events",
       icon: CalendarDays,
     },
+        { name: "Announcements", href: "/dashboard/announcements", icon: Megaphone },
   ],
 
   [ROLES.CHURCH_ELDER]: [
@@ -185,6 +190,11 @@ const quickActionsByRole = {
       name: "Ministry Events",
       href: "/dashboard/events",
       icon: CalendarDays,
+    },
+        {
+      name: "Send Announcement",
+      href: "/dashboard/announcements",
+      icon: Megaphone,
     },
   ],
 

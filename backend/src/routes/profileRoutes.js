@@ -9,6 +9,11 @@ const {
   updateMyProfile,
 } = require("../controllers/profileController");
 
+const {
+  getPreferences,
+  updatePreferences,
+} = require("../controllers/preferencesController");
+
 const { profileValidator } = require("../validators/profileValidator");
 
 router.use(authMiddleware);
@@ -21,5 +26,8 @@ router.put(
   profileValidator,
   updateMyProfile
 );
+
+router.get("/preferences", getPreferences);
+router.put("/preferences", updatePreferences);
 
 module.exports = router;

@@ -22,6 +22,25 @@ const IN_MINISTRIES = `
   )
 `;
 
+const SUMMARY_SELECT = `
+  SELECT
+    a.id,
+    a.subject,
+    a.message,
+    a.audience_label,
+    a.status,
+    a.total_recipients,
+    a.sent_count,
+    a.failed_count,
+    a.skipped_opted_out,
+    a.created_at,
+    a.completed_at,
+    u.first_name,
+    u.last_name
+  FROM announcements a
+  INNER JOIN users u ON u.id = a.created_by
+`;
+
 const getLedMinistries = async (userId) => {
   const [rows] = await db.execute(
     `
@@ -81,30 +100,25 @@ const getMinistryNames = async (ids) => {
   return rows.map((row) => row.name);
 };
 
+/*
+ * Browse or search eligible members, one page at a time.
+ */
 const searchMembers = async ({
   search = "",
-  restrictMinistryIds = null,
-  limit = 20,
+  ministryIds = null,
+  limit = 25,
+  offset = 0,
 }) => {
-  let sql = `
-    SELECT
-      m.id,
-      m.member_number,
-      u.first_name,
-      u.last_name,
-      u.email
-    ${ELIGIBLE_BASE}
-  `;
-
+  let conditions = "";
   const params = [];
 
-  if (restrictMinistryIds) {
-    sql += IN_MINISTRIES;
-    params.push(restrictMinistryIds);
+  if (ministryIds) {
+    conditions += IN_MINISTRIES;
+    params.push(ministryIds);
   }
 
   if (search) {
-    sql += `
+    conditions += `
       AND (
         u.first_name LIKE ?
         OR u.last_name LIKE ?
@@ -118,11 +132,28 @@ const searchMembers = async ({
     params.push(term, term, term, term, term);
   }
 
-  sql += ` ORDER BY u.first_name, u.last_name LIMIT ${Number(limit)}`;
+  const [countRows] = await db.query(
+    `SELECT COUNT(*) AS total ${ELIGIBLE_BASE} ${conditions}`,
+    params
+  );
 
-  const [rows] = await db.query(sql, params);
+  const [rows] = await db.query(
+    `
+      SELECT
+        m.id,
+        m.member_number,
+        u.first_name,
+        u.last_name,
+        u.email
+      ${ELIGIBLE_BASE}
+      ${conditions}
+      ORDER BY u.first_name, u.last_name, m.id
+      LIMIT ${Number(limit)} OFFSET ${Number(offset)}
+    `,
+    params
+  );
 
-  return rows;
+  return { rows, total: Number(countRows[0]?.total || 0) };
 };
 
 const resolveRecipients = async ({
@@ -264,6 +295,39 @@ const getAnnouncementBasic = async (id) => {
   return rows[0] || null;
 };
 
+const getAnnouncementById = async (id) => {
+  const [rows] = await db.query(`${SUMMARY_SELECT} WHERE a.id = ? LIMIT 1`, [
+    id,
+  ]);
+
+  return rows[0] || null;
+};
+
+const getRecipients = async (announcementId) => {
+  const [rows] = await db.query(
+    `
+      SELECT
+        ar.id,
+        ar.status,
+        ar.error,
+        ar.sent_at,
+        u.first_name,
+        u.last_name,
+        u.email
+      FROM announcement_recipients ar
+      INNER JOIN users u ON u.id = ar.user_id
+      WHERE ar.announcement_id = ?
+      ORDER BY
+        FIELD(ar.status, 'failed', 'pending', 'sent'),
+        u.first_name,
+        u.last_name
+    `,
+    [announcementId]
+  );
+
+  return rows;
+};
+
 const getPendingBatch = async (announcementId, limit) => {
   const [rows] = await db.query(
     `
@@ -331,6 +395,13 @@ const finishAnnouncement = async (announcementId, status) => {
   );
 };
 
+const markAnnouncementSending = async (announcementId) => {
+  await db.execute(
+    "UPDATE announcements SET status = 'sending', completed_at = NULL WHERE id = ?",
+    [announcementId]
+  );
+};
+
 const resetFailedToPending = async (announcementId) => {
   await db.execute(
     `
@@ -341,32 +412,31 @@ const resetFailedToPending = async (announcementId) => {
     [announcementId]
   );
 
-  await db.execute(
-    "UPDATE announcements SET status = 'sending', completed_at = NULL WHERE id = ?",
-    [announcementId]
+  await markAnnouncementSending(announcementId);
+};
+
+/*
+ * Retry one person. Returns true if a failed recipient was reset.
+ */
+const resetRecipientToPending = async (announcementId, recipientId) => {
+  const [result] = await db.execute(
+    `
+      UPDATE announcement_recipients
+      SET status = 'pending', error = NULL
+      WHERE id = ? AND announcement_id = ? AND status = 'failed'
+    `,
+    [recipientId, announcementId]
   );
+
+  if (result.affectedRows === 0) return false;
+
+  await markAnnouncementSending(announcementId);
+
+  return true;
 };
 
 const listAnnouncements = async ({ createdBy = null } = {}) => {
-  let sql = `
-    SELECT
-      a.id,
-      a.subject,
-      a.message,
-      a.audience_label,
-      a.status,
-      a.total_recipients,
-      a.sent_count,
-      a.failed_count,
-      a.skipped_opted_out,
-      a.created_at,
-      a.completed_at,
-      u.first_name,
-      u.last_name
-    FROM announcements a
-    INNER JOIN users u ON u.id = a.created_by
-  `;
-
+  let sql = SUMMARY_SELECT;
   const params = [];
 
   if (createdBy) {
@@ -395,6 +465,99 @@ const getUserContact = async (userId) => {
   return rows[0] || null;
 };
 
+/*
+ * Totals that explain why fewer people can receive announcements
+ * than appear in the Members table. The three groups never overlap.
+ */
+const getMemberStats = async ({ restrictMinistryIds = null } = {}) => {
+  let sql = `
+    SELECT
+      COUNT(*) AS total,
+      SUM(m.status <> 'Active' OR COALESCE(u.is_active, 1) = 0) AS inactive,
+      SUM(
+        m.status = 'Active'
+        AND COALESCE(u.is_active, 1) = 1
+        AND u.email_verified_at IS NULL
+      ) AS not_verified,
+      SUM(
+        m.status = 'Active'
+        AND COALESCE(u.is_active, 1) = 1
+        AND u.email_verified_at IS NOT NULL
+      ) AS eligible
+    FROM members m
+    INNER JOIN users u ON u.id = m.user_id
+    WHERE 1 = 1
+  `;
+
+  const params = [];
+
+  if (restrictMinistryIds) {
+    sql += IN_MINISTRIES;
+    params.push(restrictMinistryIds);
+  }
+
+  const [rows] = await db.query(sql, params);
+  const row = rows[0] || {};
+
+  return {
+    total: Number(row.total || 0),
+    inactive: Number(row.inactive || 0),
+    notVerified: Number(row.not_verified || 0),
+    eligible: Number(row.eligible || 0),
+  };
+};
+
+/*
+ * Members that match a search but cannot receive announcements,
+ * so the picker can explain why they are missing.
+ */
+const searchIneligibleMembers = async ({
+  search,
+  ministryIds = null,
+  limit = 5,
+}) => {
+  const term = `%${search}%`;
+
+  let sql = `
+    SELECT
+      m.id,
+      m.member_number,
+      m.status AS member_status,
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.is_active,
+      u.email_verified_at
+    FROM members m
+    INNER JOIN users u ON u.id = m.user_id
+    WHERE NOT (
+      m.status = 'Active'
+      AND COALESCE(u.is_active, 1) = 1
+      AND u.email_verified_at IS NOT NULL
+    )
+    AND (
+      u.first_name LIKE ?
+      OR u.last_name LIKE ?
+      OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
+      OR u.email LIKE ?
+      OR m.member_number LIKE ?
+    )
+  `;
+
+  const params = [term, term, term, term, term];
+
+  if (ministryIds) {
+    sql += IN_MINISTRIES;
+    params.push(ministryIds);
+  }
+
+  sql += ` ORDER BY u.first_name, u.last_name LIMIT ${Number(limit)}`;
+
+  const [rows] = await db.query(sql, params);
+
+  return rows;
+};
+
 module.exports = {
   getLedMinistries,
   getMinistries,
@@ -405,11 +568,14 @@ module.exports = {
   createAnnouncementWithRecipients,
   getAnnouncementForSend,
   getAnnouncementBasic,
+  getAnnouncementById,
+  getRecipients,
   getPendingBatch,
   markRecipient,
   refreshCounts,
   finishAnnouncement,
   resetFailedToPending,
+  resetRecipientToPending,
   listAnnouncements,
   getUserContact,
 };

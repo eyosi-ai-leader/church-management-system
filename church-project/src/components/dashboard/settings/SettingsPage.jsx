@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { UserRound } from "lucide-react";
 
 import ChangePasswordForm from "@/components/dashboard/security/ChangePasswordForm";
+import NotificationPreferences from "./NotificationPreferences";
 import { getStoredUser } from "@/lib/userStorage";
 import { getRoleName } from "@/lib/roles";
 
@@ -23,7 +24,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Manage your account and security.
+          Manage your account, notifications and security.
         </p>
       </div>
 
@@ -54,6 +55,8 @@ export default function SettingsPage() {
           .
         </p>
       </section>
+
+      <NotificationPreferences />
 
       <ChangePasswordForm />
     </div>
