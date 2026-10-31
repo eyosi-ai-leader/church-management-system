@@ -71,7 +71,17 @@ export const createAnnouncement = ({ subject, message, audience }) =>
     body: { subject, message, audience },
   });
 
-export const listAnnouncements = () => request("/announcements");
+export const listAnnouncements = ({ search = "", page = 1 } = {}) => {
+  const params = new URLSearchParams();
+
+  if (search) params.set("search", search);
+  params.set("page", String(page));
+
+  return request(`/announcements?${params.toString()}`);
+};
+
+export const deleteAnnouncement = (id) =>
+  request(`/announcements/${id}`, { method: "DELETE" });
 
 export const getAnnouncementDetails = (id) =>
   request(`/announcements/${id}`);

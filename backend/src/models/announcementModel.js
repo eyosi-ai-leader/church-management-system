@@ -288,7 +288,7 @@ const getAnnouncementForSend = async (id) => {
 
 const getAnnouncementBasic = async (id) => {
   const [rows] = await db.execute(
-    "SELECT id, created_by FROM announcements WHERE id = ? LIMIT 1",
+    "SELECT id, created_by FROM announcements WHERE id = ? AND deleted_at IS NULL LIMIT 1",
     [id]
   );
 
@@ -296,9 +296,10 @@ const getAnnouncementBasic = async (id) => {
 };
 
 const getAnnouncementById = async (id) => {
-  const [rows] = await db.query(`${SUMMARY_SELECT} WHERE a.id = ? LIMIT 1`, [
-    id,
-  ]);
+    const [rows] = await db.query(
+    `${SUMMARY_SELECT} WHERE a.id = ? AND a.deleted_at IS NULL LIMIT 1`,
+    [id]
+  );
 
   return rows[0] || null;
 };
@@ -435,20 +436,43 @@ const resetRecipientToPending = async (announcementId, recipientId) => {
   return true;
 };
 
-const listAnnouncements = async ({ createdBy = null } = {}) => {
-  let sql = SUMMARY_SELECT;
+const listAnnouncements = async ({
+  createdBy = null,
+  search = "",
+  limit = 20,
+  offset = 0,
+} = {}) => {
+  let where = " WHERE a.deleted_at IS NULL";
   const params = [];
 
   if (createdBy) {
-    sql += " WHERE a.created_by = ?";
+    where += " AND a.created_by = ?";
     params.push(createdBy);
   }
 
-  sql += " ORDER BY a.id DESC LIMIT 50";
+  if (search) {
+    where += " AND (a.subject LIKE ? OR a.audience_label LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
 
-  const [rows] = await db.query(sql, params);
+  const [countRows] = await db.query(
+    `SELECT COUNT(*) AS total FROM announcements a${where}`,
+    params
+  );
 
-  return rows;
+  const [rows] = await db.query(
+    `${SUMMARY_SELECT}${where} ORDER BY a.id DESC LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+    params
+  );
+
+  return { rows, total: Number(countRows[0]?.total || 0) };
+};
+
+const softDeleteAnnouncement = async (id) => {
+  await db.execute(
+    "UPDATE announcements SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL",
+    [id]
+  );
 };
 
 const getUserContact = async (userId) => {
@@ -563,6 +587,8 @@ module.exports = {
   getMinistries,
   getMinistryNames,
   searchMembers,
+  getMemberStats,
+  searchIneligibleMembers,
   resolveRecipients,
   countPlannedToday,
   createAnnouncementWithRecipients,
@@ -577,5 +603,7 @@ module.exports = {
   resetFailedToPending,
   resetRecipientToPending,
   listAnnouncements,
+  softDeleteAnnouncement,
+  markAnnouncementSending,
   getUserContact,
 };

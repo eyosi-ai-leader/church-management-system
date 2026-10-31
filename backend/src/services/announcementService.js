@@ -563,14 +563,38 @@ const toSummary = (row) => {
   };
 };
 
-const listAnnouncements = async (user) => {
+const listAnnouncements = async (user, { search, page } = {}) => {
   const scope = await getScope(user);
 
-  const rows = await model.listAnnouncements({
+  const pageSize = 20;
+  const pageNumber = Math.max(1, Number(page) || 1);
+  const offset = (pageNumber - 1) * pageSize;
+
+  const { rows, total } = await model.listAnnouncements({
     createdBy: scope.unrestricted ? null : user.id,
+    search: String(search || "").trim(),
+    limit: pageSize,
+    offset,
   });
 
-  return rows.map(toSummary);
+  return {
+    items: rows.map(toSummary),
+    total,
+    hasMore: offset + rows.length < total,
+  };
+};
+
+const deleteAnnouncement = async (user, id) => {
+  await assertCanManage(user, id);
+
+  if (running.has(id)) {
+    throw httpError(
+      "This announcement is still being sent. Please wait until it finishes.",
+      409
+    );
+  }
+
+  await model.softDeleteAnnouncement(id);
 };
 
 const getAnnouncementDetails = async (user, id) => {
@@ -623,4 +647,5 @@ module.exports = {
   retryRecipient,
   listAnnouncements,
   getAnnouncementDetails,
+  deleteAnnouncement,
 };

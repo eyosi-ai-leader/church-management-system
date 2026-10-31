@@ -16,6 +16,7 @@ const {
   detailsValidator,
   retryRecipientValidator,
   membersQueryValidator,
+  listQueryValidator,
 } = require("../validators/announcementValidator");
 
 const perUserLimiter = (windowMs, limit) =>
@@ -37,6 +38,7 @@ const browseLimiter = perUserLimiter(15 * 60 * 1000, 300);
 const testLimiter = perUserLimiter(60 * 60 * 1000, 10);
 const createLimiter = perUserLimiter(60 * 60 * 1000, 10);
 const retryLimiter = perUserLimiter(60 * 60 * 1000, 30);
+const deleteLimiter = perUserLimiter(60 * 60 * 1000, 60);
 
 // Admin (1), Pastor (2) and Ministry Leader (4) only.
 router.use(authMiddleware, roleMiddleware(1, 2, 4));
@@ -44,13 +46,14 @@ router.use(authMiddleware, roleMiddleware(1, 2, 4));
 // Fixed paths first, then the ":id" routes.
 router.get("/options", controller.getOptions);
 router.get("/members", browseLimiter, membersQueryValidator, controller.searchMembers);
-router.get("/", controller.list);
+router.get("/", listQueryValidator, controller.list);
 
 router.post("/preview", previewLimiter, previewValidator, controller.preview);
 router.post("/test", testLimiter, testValidator, controller.sendTest);
 router.post("/", createLimiter, createAnnouncementValidator, controller.create);
 
 router.get("/:id", detailsValidator, controller.details);
+router.delete("/:id", deleteLimiter, detailsValidator, controller.remove);
 router.post("/:id/retry", retryLimiter, retryValidator, controller.retry);
 router.post(
   "/:id/recipients/:recipientId/retry",

@@ -591,6 +591,15 @@ export default function DashboardHeader() {
                   Settings
                 </Link>
 
+                <Link
+                  href="/dashboard/help"
+                  onClick={() => setActiveMenu(null)}
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <HelpCircle size={16} className="text-slate-400" />
+                  Help & Support
+                </Link>
+                
                 <button
                   type="button"
                   onClick={handleLogout}

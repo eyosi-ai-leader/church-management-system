@@ -68,7 +68,11 @@ const create = handle(async (req, res) => {
 });
 
 const list = handle(async (req, res) => {
-  const data = await service.listAnnouncements(req.user);
+  const data = await service.listAnnouncements(req.user, {
+    search: req.query.search,
+    page: req.query.page,
+  });
+
   return successResponse(res, "Announcements retrieved", data);
 });
 
@@ -96,6 +100,11 @@ const retryRecipient = handle(async (req, res) => {
   return successResponse(res, "Retrying this email.", null, 202);
 });
 
+const remove = handle(async (req, res) => {
+  await service.deleteAnnouncement(req.user, Number(req.params.id));
+  return successResponse(res, "Announcement deleted.", null);
+});
+
 module.exports = {
   getOptions,
   searchMembers,
@@ -106,4 +115,5 @@ module.exports = {
   details,
   retry,
   retryRecipient,
+  remove,
 };

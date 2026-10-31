@@ -48,6 +48,18 @@ const membersQueryValidator = [
     .withMessage("Invalid page"),
 ];
 
+const listQueryValidator = [
+  query("search")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Search is too long"),
+  query("page")
+    .optional({ values: "falsy" })
+    .isInt({ min: 1, max: 10000 })
+    .withMessage("Invalid page"),
+];
+
 module.exports = {
   previewValidator,
   testValidator,
@@ -56,4 +68,5 @@ module.exports = {
   detailsValidator,
   retryRecipientValidator,
   membersQueryValidator,
+  listQueryValidator,
 };
