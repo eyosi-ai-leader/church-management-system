@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Loader2, Mail, Send, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  Loader2,
+  Mail,
+  Megaphone,
+  Send,
+  Users,
+} from "lucide-react";
 
 import MemberPicker from "./MemberPicker";
 import {
@@ -16,6 +24,69 @@ const MAX_MESSAGE = 5000;
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10";
 
+const DELIVERY_OPTIONS = [
+  {
+    value: "both",
+    label: "Dashboard + email",
+    description: "Shown in each member's dashboard and sent by email too.",
+    icon: Megaphone,
+  },
+  {
+    value: "dashboard",
+    label: "Dashboard only",
+    description:
+      "Shown in the dashboard and notification bell. No emails are sent.",
+    icon: Bell,
+  },
+  {
+    value: "email",
+    label: "Email only",
+    description: "Sent by email. It does not appear in the dashboard.",
+    icon: Mail,
+  },
+];
+
+const people = (count) => (count === 1 ? "person" : "people");
+
+function statsNote(stats, delivery) {
+  if (!stats) return "";
+
+  const reachable =
+    delivery === "email" ? stats.active - stats.notVerified : stats.active;
+
+  const parts = [];
+
+  if (reachable < stats.total) {
+    parts.push(
+      `${reachable} of ${stats.total} members can ${
+        delivery === "email"
+          ? "receive announcement emails"
+          : "see announcements in the dashboard"
+      }.`
+    );
+  }
+
+  if (delivery !== "dashboard" && stats.notVerified > 0) {
+    parts.push(
+      delivery === "both"
+        ? `${stats.notVerified} ${
+            stats.notVerified === 1 ? "has" : "have"
+          } not verified their email and will only see it in the dashboard.`
+        : `${stats.notVerified} ${
+            stats.notVerified === 1 ? "has" : "have"
+          } not verified their email.`
+    );
+  }
+
+  if (stats.inactive > 0) {
+    parts.push(
+      `${stats.inactive} ${stats.inactive === 1 ? "is" : "are"} inactive.`
+    );
+  }
+
+  return parts.join(" ");
+}
+
 export default function ComposeAnnouncement({ onSent }) {
   const [options, setOptions] = useState(null);
   const [optionsError, setOptionsError] = useState("");
@@ -23,6 +94,7 @@ export default function ComposeAnnouncement({ onSent }) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
+  const [delivery, setDelivery] = useState("both");
   const [audienceType, setAudienceType] = useState("everyone");
   const [ministryIds, setMinistryIds] = useState([]);
   const [members, setMembers] = useState([]);
@@ -93,7 +165,7 @@ export default function ComposeAnnouncement({ onSent }) {
 
     const timer = setTimeout(async () => {
       try {
-        const data = await previewAudience(audience);
+        const data = await previewAudience(audience, delivery);
         if (!cancelled) setPreview({ loading: false, data, error: "" });
       } catch (err) {
         if (!cancelled) {
@@ -106,7 +178,7 @@ export default function ComposeAnnouncement({ onSent }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [audience]);
+  }, [audience, delivery]);
 
   const choices = isLeader
     ? [
@@ -132,15 +204,17 @@ export default function ComposeAnnouncement({ onSent }) {
     );
   }
 
+  const data = preview.data;
+  const reached = data ? (delivery === "email" ? data.emails : data.reach) : 0;
+
   const messageOk = message.trim().length >= 10;
   const subjectOk = subject.trim().length > 0;
-  const recipients = preview.data?.recipients || 0;
 
   const canSend =
     subjectOk &&
     messageOk &&
-    recipients > 0 &&
-    !preview.data?.tooMany &&
+    reached > 0 &&
+    !data?.tooMany &&
     !preview.loading &&
     !sending;
 
@@ -182,6 +256,7 @@ export default function ComposeAnnouncement({ onSent }) {
         subject: subject.trim(),
         message: message.trim(),
         audience,
+        delivery,
       });
 
       setSubject("");
@@ -225,6 +300,8 @@ export default function ComposeAnnouncement({ onSent }) {
       </div>
     );
   }
+
+  const note = statsNote(options.stats, delivery);
 
   return (
     <div className="space-y-6">
@@ -276,23 +353,13 @@ export default function ComposeAnnouncement({ onSent }) {
             ))}
           </div>
         </fieldset>
-         
-                 {options.stats && options.stats.eligible < options.stats.total && (
+
+        {note && (
           <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">
-            {options.stats.eligible} of {options.stats.total} members can
-            receive announcements.
-            {options.stats.notVerified > 0 &&
-              ` ${options.stats.notVerified} ${
-                options.stats.notVerified === 1 ? "has" : "have"
-              } not verified their email.`}
-            {options.stats.inactive > 0 &&
-              ` ${options.stats.inactive} ${
-                options.stats.inactive === 1 ? "is" : "are"
-              } inactive.`}
+            {note}
           </p>
         )}
 
-        
         {audienceType === "ministries" && !singleMinistry && (
           <div className="mt-5">
             <div className="mb-2 flex items-center justify-between">
@@ -351,12 +418,69 @@ export default function ComposeAnnouncement({ onSent }) {
 
         {audienceType === "members" && (
           <div className="mt-5">
-                        <MemberPicker
+            <MemberPicker
               selected={members}
               onChange={setMembers}
               ministries={options.ministries}
+              delivery={delivery}
             />
           </div>
+        )}
+      </section>
+
+      {/* Delivery */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <fieldset>
+          <legend className="text-lg font-semibold text-slate-900">
+            How should it be delivered?
+          </legend>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {DELIVERY_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const selected = delivery === option.value;
+
+              return (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer flex-col gap-2 rounded-xl border p-4 transition focus-within:ring-2 focus-within:ring-indigo-500 ${
+                    selected
+                      ? "border-slate-950 bg-slate-950 text-white"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="delivery"
+                    value={option.value}
+                    checked={selected}
+                    onChange={() => setDelivery(option.value)}
+                    className="sr-only"
+                  />
+
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <Icon size={16} aria-hidden="true" />
+                    {option.label}
+                  </span>
+
+                  <span
+                    className={`text-xs leading-5 ${
+                      selected ? "text-white/75" : "text-slate-500"
+                    }`}
+                  >
+                    {option.description}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        {delivery !== "email" && (
+          <p className="mt-3 text-xs text-slate-500">
+            Members who turned off announcement emails still see announcements
+            in their dashboard.
+          </p>
         )}
 
         {/* Preview */}
@@ -366,7 +490,9 @@ export default function ComposeAnnouncement({ onSent }) {
         >
           {!audience && (
             <p className="text-slate-500">
-              Choose at least one {audienceType === "members" ? "member" : "ministry"} to see how many people this will reach.
+              Choose at least one{" "}
+              {audienceType === "members" ? "member" : "ministry"} to see how
+              many people this will reach.
             </p>
           )}
 
@@ -381,34 +507,50 @@ export default function ComposeAnnouncement({ onSent }) {
             <p className="text-red-600">{preview.error}</p>
           )}
 
-          {audience && preview.data && !preview.loading && (
+          {audience && data && !preview.loading && (
             <div className="space-y-1">
               <p className="flex items-center gap-2 font-semibold text-slate-900">
                 <Users size={16} aria-hidden="true" />
-                {preview.data.recipients === 0
+                {delivery === "email"
+                  ? data.emails === 0
+                    ? "No eligible recipients"
+                    : `This will email ${data.emails} ${people(data.emails)}`
+                  : data.reach === 0
                   ? "No eligible recipients"
-                  : `This will reach ${preview.data.recipients} ${
-                      preview.data.recipients === 1 ? "person" : "people"
-                    }`}
+                  : delivery === "dashboard"
+                  ? `This will reach ${data.reach} ${people(data.reach)} in their dashboard`
+                  : `This will reach ${data.reach} ${people(data.reach)} in the dashboard and email ${data.emails}`}
               </p>
 
-              {preview.data.optedOut > 0 && (
+              {data.optedOut > 0 && (
                 <p className="text-slate-500">
-                  {preview.data.optedOut}{" "}
-                  {preview.data.optedOut === 1 ? "member has" : "members have"}{" "}
-                  turned off announcement emails and will be skipped.
+                  {data.optedOut}{" "}
+                  {data.optedOut === 1 ? "member has" : "members have"} turned
+                  off announcement emails
+                  {delivery === "both"
+                    ? ". They will still see it in the dashboard."
+                    : " and will be skipped."}
                 </p>
               )}
 
-              {preview.data.tooMany && (
+              {data.unverified > 0 && (
+                <p className="text-slate-500">
+                  {data.unverified}{" "}
+                  {data.unverified === 1 ? "member has" : "members have"} not
+                  verified their email. They will only see it in the dashboard.
+                </p>
+              )}
+
+              {data.tooMany && (
                 <p className="flex items-start gap-2 text-red-600">
                   <AlertTriangle
                     size={16}
                     className="mt-0.5 shrink-0"
                     aria-hidden="true"
                   />
-                  The limit is {preview.data.maxRecipients} people per
-                  announcement. Send it in smaller groups.
+                  The email limit is {data.maxRecipients} people per
+                  announcement. Send it in smaller groups, or choose
+                  &quot;Dashboard only&quot;.
                 </p>
               )}
             </div>
@@ -473,11 +615,15 @@ export default function ComposeAnnouncement({ onSent }) {
           className="rounded-2xl border border-amber-200 bg-amber-50 p-5"
         >
           <p className="text-sm font-semibold text-amber-900">
-            Send this announcement to {recipients}{" "}
-            {recipients === 1 ? "person" : "people"}?
+            Send this announcement to {reached} {people(reached)}?
           </p>
+
           <p className="mt-1 text-sm text-amber-800">
-            Emails can&apos;t be recalled once they are sent.
+            {delivery === "dashboard"
+              ? "It will appear in their dashboards. You can delete it later to remove it for everyone."
+              : delivery === "both"
+              ? `It will appear in their dashboards and ${data?.emails || 0} will also receive an email. Emails can't be recalled once they are sent.`
+              : "Emails can't be recalled once they are sent."}
           </p>
 
           <div className="mt-4 flex flex-wrap gap-3">
@@ -503,19 +649,21 @@ export default function ComposeAnnouncement({ onSent }) {
         </div>
       ) : (
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={handleTest}
-            disabled={testing}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {testing ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Mail size={16} aria-hidden="true" />
-            )}
-            {testing ? "Sending test..." : "Send test to myself"}
-          </button>
+          {delivery !== "dashboard" && (
+            <button
+              type="button"
+              onClick={handleTest}
+              disabled={testing}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {testing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Mail size={16} aria-hidden="true" />
+              )}
+              {testing ? "Sending test..." : "Send test to myself"}
+            </button>
+          )}
 
           <button
             type="button"

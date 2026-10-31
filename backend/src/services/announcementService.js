@@ -12,6 +12,7 @@ const DAILY_LIMIT = Number(process.env.ANNOUNCEMENT_DAILY_LIMIT) || 400;
 const SEND_DELAY_MS = Number(process.env.ANNOUNCEMENT_SEND_DELAY_MS) || 1000;
 const BATCH_SIZE = 10;
 const MEMBER_PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
 // Announcements currently being sent by this server process.
 const running = new Set();
@@ -27,6 +28,9 @@ const httpError = (message, statusCode) => {
 const churchName = () => process.env.CHURCH_NAME || "our church";
 
 const fullName = (first, last) => `${first || ""} ${last || ""}`.trim();
+
+const normalizeDelivery = (value) =>
+  ["both", "dashboard", "email"].includes(value) ? value : "both";
 
 /*
  * Turns a raw mail-server error into a short, readable reason.
@@ -58,6 +62,20 @@ const friendlyReason = (raw) => {
   }
 
   return "The email could not be delivered.";
+};
+
+const skippedReason = (row, delivery) => {
+  if (delivery === "dashboard") return "";
+
+  if (!row.email_verified_at) {
+    return "Email not verified, so they only see it in the dashboard.";
+  }
+
+  if (Number(row.announcement_emails) === 0) {
+    return "Turned off announcement emails. They still see it in the dashboard.";
+  }
+
+  return "No email was sent.";
 };
 
 /*
@@ -166,7 +184,7 @@ const normalizeAudience = (audience, scope) => {
   return { type, memberIds };
 };
 
-const buildLabel = async (audience, recipientCount) => {
+const buildLabel = async (audience, reachCount) => {
   let label;
 
   if (audience.type === "everyone") {
@@ -175,31 +193,55 @@ const buildLabel = async (audience, recipientCount) => {
     const names = await model.getMinistryNames(audience.ministryIds);
     label = `Ministries: ${names.join(", ")}`;
   } else {
-    label = `${recipientCount} selected member${recipientCount === 1 ? "" : "s"}`;
+    label = `${reachCount} selected member${reachCount === 1 ? "" : "s"}`;
   }
 
   return label.length > 250 ? `${label.slice(0, 247)}...` : label;
 };
 
-const resolveAudience = async (user, audienceInput) => {
+/*
+ * Works out who is reached and who also gets an email.
+ *  - "dashboard": everyone reached, no emails
+ *  - "both": everyone reached, email only to verified members who opted in
+ *  - "email": only verified members who opted in
+ */
+const resolveAudience = async (user, audienceInput, deliveryInput) => {
+  const delivery = normalizeDelivery(deliveryInput);
   const scope = await getScope(user);
   const audience = normalizeAudience(audienceInput, scope);
 
   const rows = await model.resolveRecipients({
     ...audience,
+    delivery,
     restrictMinistryIds: scope.unrestricted ? null : scope.ledMinistryIds,
   });
 
-  const recipients = rows.filter(
-    (row) => Number(row.announcement_emails) === 1
-  );
+  const people = rows.map((row) => {
+    const verified = Boolean(row.email_verified_at);
+    const optedIn = Number(row.announcement_emails) === 1;
 
-  return {
-    audience,
-    recipients,
-    matched: rows.length,
-    optedOut: rows.length - recipients.length,
-  };
+    return {
+      userId: row.user_id,
+      verified,
+      optedIn,
+      emailOk: verified && optedIn,
+    };
+  });
+
+  const wantsEmail = delivery !== "dashboard";
+
+  const emailPeople = wantsEmail ? people.filter((p) => p.emailOk) : [];
+
+  const optedOut = wantsEmail
+    ? people.filter((p) => p.verified && !p.optedIn).length
+    : 0;
+
+  const unverified =
+    delivery === "both" ? people.filter((p) => !p.verified).length : 0;
+
+  const reach = delivery === "email" ? emailPeople : people;
+
+  return { audience, delivery, people, reach, emailPeople, optedOut, unverified };
 };
 
 const getAudienceOptions = async (user) => {
@@ -222,7 +264,8 @@ const getAudienceOptions = async (user) => {
     stats,
   };
 };
-const unavailableReason = (row) => {
+
+const unavailableReason = (row, delivery) => {
   if (row.member_status !== "Active") {
     return "This member is marked inactive.";
   }
@@ -231,11 +274,14 @@ const unavailableReason = (row) => {
     return "This account is disabled.";
   }
 
-  return "Email not verified yet. They need to confirm their 6-digit code first.";
+  return delivery === "email"
+    ? "Email not verified yet. They need to confirm their 6-digit code first."
+    : "This member cannot be reached right now.";
 };
 
-const searchMembers = async (user, { search, ministryId, page }) => {
+const searchMembers = async (user, { search, ministryId, page, delivery }) => {
   const scope = await getScope(user);
+  const mode = normalizeDelivery(delivery);
 
   const pageNumber = Math.max(1, Number(page) || 1);
   const ministry = Number(ministryId) || null;
@@ -262,6 +308,7 @@ const searchMembers = async (user, { search, ministryId, page }) => {
     ministryIds,
     limit: MEMBER_PAGE_SIZE,
     offset,
+    delivery: mode,
   });
 
   let unavailable = [];
@@ -270,13 +317,14 @@ const searchMembers = async (user, { search, ministryId, page }) => {
     const blocked = await model.searchIneligibleMembers({
       search: term,
       ministryIds,
+      delivery: mode,
     });
 
     unavailable = blocked.map((row) => ({
       id: row.id,
       name: fullName(row.first_name, row.last_name),
       email: row.email,
-      reason: unavailableReason(row),
+      reason: unavailableReason(row, mode),
     }));
   }
 
@@ -293,15 +341,17 @@ const searchMembers = async (user, { search, ministryId, page }) => {
   };
 };
 
-const previewAudience = async (user, audienceInput) => {
-  const result = await resolveAudience(user, audienceInput);
+const previewAudience = async (user, audienceInput, deliveryInput) => {
+  const resolved = await resolveAudience(user, audienceInput, deliveryInput);
 
   return {
-    matched: result.matched,
-    optedOut: result.optedOut,
-    recipients: result.recipients.length,
+    delivery: resolved.delivery,
+    reach: resolved.reach.length,
+    emails: resolved.emailPeople.length,
+    optedOut: resolved.optedOut,
+    unverified: resolved.unverified,
     maxRecipients: MAX_RECIPIENTS,
-    tooMany: result.recipients.length > MAX_RECIPIENTS,
+    tooMany: resolved.emailPeople.length > MAX_RECIPIENTS,
   };
 };
 
@@ -459,37 +509,63 @@ const processAnnouncement = async (announcementId) => {
   }
 };
 
-const createAnnouncement = async (user, { subject, message, audience }) => {
-  const resolved = await resolveAudience(user, audience);
+const createAnnouncement = async (
+  user,
+  { subject, message, audience, delivery }
+) => {
+  const resolved = await resolveAudience(user, audience, delivery);
+  const mode = resolved.delivery;
 
-  if (resolved.recipients.length === 0) {
+  if (resolved.reach.length === 0) {
     throw httpError(
-      "There are no eligible recipients. Members need a verified email and must not have opted out.",
+      mode === "email"
+        ? "There are no eligible recipients. Members need a verified email and must not have opted out."
+        : "There are no active members in this audience.",
       400
     );
   }
 
-  if (resolved.recipients.length > MAX_RECIPIENTS) {
+  if (resolved.emailPeople.length > MAX_RECIPIENTS) {
     throw httpError(
-      `This would reach ${resolved.recipients.length} people. The limit is ${MAX_RECIPIENTS} per announcement. Send it in smaller groups.`,
+      `This would email ${resolved.emailPeople.length} people. The limit is ${MAX_RECIPIENTS} per announcement. Send it in smaller groups, or choose "Dashboard only".`,
       400
     );
   }
 
-  const plannedToday = await model.countPlannedToday();
+  if (resolved.emailPeople.length > 0) {
+    const plannedToday = await model.countPlannedToday();
 
-  if (plannedToday + resolved.recipients.length > DAILY_LIMIT) {
-    const remaining = Math.max(0, DAILY_LIMIT - plannedToday);
+    if (plannedToday + resolved.emailPeople.length > DAILY_LIMIT) {
+      const remaining = Math.max(0, DAILY_LIMIT - plannedToday);
 
-    throw httpError(
-      `The daily email limit would be exceeded. You can send to about ${remaining} more people today.`,
-      429
-    );
+      throw httpError(
+        `The daily email limit would be exceeded. You can email about ${remaining} more people today. "Dashboard only" has no limit.`,
+        429
+      );
+    }
   }
+
+  const recipients =
+    mode === "email"
+      ? resolved.emailPeople.map((person) => ({
+          userId: person.userId,
+          emailStatus: "pending",
+          read: false,
+        }))
+      : resolved.people.map((person) => ({
+          userId: person.userId,
+          emailStatus: mode === "both" && person.emailOk ? "pending" : "skipped",
+          // The sender does not need to be notified about their own message.
+          read: person.userId === user.id,
+        }));
+
+  const emailTotal = recipients.filter(
+    (recipient) => recipient.emailStatus === "pending"
+  ).length;
 
   const audienceLabel = await buildLabel(
     resolved.audience,
-    resolved.recipients.length
+    resolved.reach.length
   );
 
   const id = await model.createAnnouncementWithRecipients({
@@ -497,16 +573,22 @@ const createAnnouncement = async (user, { subject, message, audience }) => {
     subject,
     message,
     audienceLabel,
-    recipients: resolved.recipients,
+    delivery: mode,
+    recipients,
+    emailTotal,
     skippedOptedOut: resolved.optedOut,
   });
 
-  // Sending continues in the background.
-  processAnnouncement(id);
+  // Emails continue in the background. The dashboard copy is already live.
+  if (emailTotal > 0) {
+    processAnnouncement(id);
+  }
 
   return {
     id,
-    total: resolved.recipients.length,
+    delivery: mode,
+    total: resolved.reach.length,
+    emails: emailTotal,
     optedOut: resolved.optedOut,
   };
 };
@@ -540,9 +622,11 @@ const retryRecipient = async (user, id, recipientId) => {
 };
 
 const toSummary = (row) => {
+  const emailTotal = Number(row.email_total || 0);
+
   const pending = Math.max(
     0,
-    row.total_recipients - row.sent_count - row.failed_count
+    emailTotal - row.sent_count - row.failed_count
   );
 
   return {
@@ -550,12 +634,15 @@ const toSummary = (row) => {
     subject: row.subject,
     message: row.message,
     audience: row.audience_label,
+    delivery: row.delivery,
     status: row.status,
     total: row.total_recipients,
+    emailTotal,
     sent: row.sent_count,
     failed: row.failed_count,
     pending,
     optedOut: row.skipped_opted_out,
+    readCount: Number(row.read_count || 0),
     sender: fullName(row.first_name, row.last_name),
     createdAt: row.created_at,
     completedAt: row.completed_at,
@@ -566,14 +653,13 @@ const toSummary = (row) => {
 const listAnnouncements = async (user, { search, page } = {}) => {
   const scope = await getScope(user);
 
-  const pageSize = 20;
   const pageNumber = Math.max(1, Number(page) || 1);
-  const offset = (pageNumber - 1) * pageSize;
+  const offset = (pageNumber - 1) * PAGE_SIZE;
 
   const { rows, total } = await model.listAnnouncements({
     createdBy: scope.unrestricted ? null : user.id,
     search: String(search || "").trim(),
-    limit: pageSize,
+    limit: PAGE_SIZE,
     offset,
   });
 
@@ -582,19 +668,6 @@ const listAnnouncements = async (user, { search, page } = {}) => {
     total,
     hasMore: offset + rows.length < total,
   };
-};
-
-const deleteAnnouncement = async (user, id) => {
-  await assertCanManage(user, id);
-
-  if (running.has(id)) {
-    throw httpError(
-      "This announcement is still being sent. Please wait until it finishes.",
-      409
-    );
-  }
-
-  await model.softDeleteAnnouncement(id);
 };
 
 const getAnnouncementDetails = async (user, id) => {
@@ -614,8 +687,14 @@ const getAnnouncementDetails = async (user, id) => {
     email: recipient.email,
     status: recipient.status,
     reason:
-      recipient.status === "failed" ? friendlyReason(recipient.error) : "",
+      recipient.status === "failed"
+        ? friendlyReason(recipient.error)
+        : recipient.status === "skipped"
+        ? skippedReason(recipient, row.delivery)
+        : "",
     sentAt: recipient.sent_at,
+    read: Boolean(recipient.read_at),
+    readAt: recipient.read_at,
   }));
 
   const count = (status) =>
@@ -624,6 +703,8 @@ const getAnnouncementDetails = async (user, id) => {
   const sent = count("sent");
   const failed = count("failed");
   const pending = count("pending");
+  const skipped = count("skipped");
+  const readCount = recipients.filter((recipient) => recipient.read).length;
   const isRunning = running.has(id);
 
   return {
@@ -631,10 +712,25 @@ const getAnnouncementDetails = async (user, id) => {
     sent,
     failed,
     pending,
+    skipped,
+    readCount,
     isRunning,
     canRetry: !isRunning && failed + pending > 0,
     recipients,
   };
+};
+
+const deleteAnnouncement = async (user, id) => {
+  await assertCanManage(user, id);
+
+  if (running.has(id)) {
+    throw httpError(
+      "This announcement is still being sent. Please wait until it finishes.",
+      409
+    );
+  }
+
+  await model.softDeleteAnnouncement(id);
 };
 
 module.exports = {

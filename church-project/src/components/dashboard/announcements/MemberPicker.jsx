@@ -9,6 +9,7 @@ export default function MemberPicker({
   selected,
   onChange,
   ministries = [],
+  delivery = "both",
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -65,6 +66,7 @@ export default function MemberPicker({
             search: query.trim(),
             ministryId,
             page: 1,
+            delivery,
           });
 
           if (cancelled) return;
@@ -87,7 +89,7 @@ export default function MemberPicker({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [open, query, ministryId]);
+  }, [open, query, ministryId , delivery]);
 
   async function loadMore() {
     if (loadingMore) return;
@@ -100,6 +102,7 @@ export default function MemberPicker({
         search: query.trim(),
         ministryId,
         page: page + 1,
+        delivery,
       });
 
       setItems((current) => {

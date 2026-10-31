@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import AnnouncementsPage from "@/components/dashboard/announcements/AnnouncementsPage";
 
 export const metadata = {
@@ -5,5 +7,9 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <AnnouncementsPage />;
+  return (
+    <Suspense fallback={null}>
+      <AnnouncementsPage />
+    </Suspense>
+  );
 }

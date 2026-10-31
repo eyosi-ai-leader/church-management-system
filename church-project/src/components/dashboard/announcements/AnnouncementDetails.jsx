@@ -10,16 +10,20 @@ import {
 } from "@/lib/announcementApi";
 
 const BADGE = {
-  sent: { label: "Sent", className: "bg-emerald-50 text-emerald-700" },
+  sent: { label: "Emailed", className: "bg-emerald-50 text-emerald-700" },
   failed: { label: "Failed", className: "bg-red-50 text-red-700" },
   pending: { label: "Waiting", className: "bg-slate-100 text-slate-600" },
+  skipped: { label: "Not emailed", className: "bg-slate-100 text-slate-500" },
 };
 
 const FILTERS = [
-  { id: "all", label: "All" },
-  { id: "failed", label: "Failed" },
-  { id: "pending", label: "Waiting" },
-  { id: "sent", label: "Sent" },
+  { id: "all", label: "All", kind: "all", test: () => true },
+  { id: "failed", label: "Failed", kind: "email", test: (r) => r.status === "failed" },
+  { id: "pending", label: "Waiting", kind: "email", test: (r) => r.status === "pending" },
+  { id: "sent", label: "Emailed", kind: "email", test: (r) => r.status === "sent" },
+  { id: "skipped", label: "Not emailed", kind: "email", test: (r) => r.status === "skipped" },
+  { id: "unread", label: "Not read", kind: "read", test: (r) => !r.read },
+  { id: "read", label: "Read", kind: "read", test: (r) => r.read },
 ];
 
 // Stops spreadsheet programs from running a cell as a formula.
@@ -32,15 +36,30 @@ const csvCell = (value) => {
 };
 
 function downloadCsv(details) {
-  const header = ["Name", "Email", "Status", "Reason", "Sent at"];
+  const showsRead = details.delivery !== "email";
 
-  const rows = details.recipients.map((recipient) => [
-    recipient.name,
-    recipient.email,
-    BADGE[recipient.status]?.label || recipient.status,
-    recipient.reason,
-    recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : "",
-  ]);
+  const header = ["Name", "Email", "Email status", "Reason", "Emailed at"];
+
+  if (showsRead) header.push("Read", "Read at");
+
+  const rows = details.recipients.map((recipient) => {
+    const row = [
+      recipient.name,
+      recipient.email,
+      BADGE[recipient.status]?.label || recipient.status,
+      recipient.reason,
+      recipient.sentAt ? new Date(recipient.sentAt).toLocaleString() : "",
+    ];
+
+    if (showsRead) {
+      row.push(
+        recipient.read ? "Yes" : "No",
+        recipient.readAt ? new Date(recipient.readAt).toLocaleString() : ""
+      );
+    }
+
+    return row;
+  });
 
   const csv = [header, ...rows]
     .map((row) => row.map(csvCell).join(","))
@@ -107,13 +126,30 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
     return () => clearInterval(timer);
   }, [sending, load, onChanged]);
 
+  const filters = useMemo(() => {
+    if (!details) return [];
+
+    const showsEmail = details.delivery !== "dashboard";
+    const showsRead = details.delivery !== "email";
+
+    return FILTERS.map((item) => ({
+      ...item,
+      count: details.recipients.filter(item.test).length,
+    })).filter((item) => {
+      if (item.kind === "all") return true;
+      if (item.kind === "email") return showsEmail && item.count > 0;
+      return showsRead;
+    });
+  }, [details]);
+
   const visible = useMemo(() => {
     if (!details) return [];
 
+    const active = FILTERS.find((item) => item.id === filter) || FILTERS[0];
     const term = search.trim().toLowerCase();
 
     return details.recipients.filter((recipient) => {
-      if (filter !== "all" && recipient.status !== filter) return false;
+      if (!active.test(recipient)) return false;
 
       if (!term) return true;
 
@@ -153,14 +189,8 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
     );
   }
 
-  const counts = details
-    ? {
-        all: details.recipients.length,
-        failed: details.failed,
-        pending: details.pending,
-        sent: details.sent,
-      }
-    : {};
+  const showsEmail = details?.delivery !== "dashboard";
+  const showsRead = details?.delivery !== "email";
 
   return (
     <div className="mt-4 space-y-5 border-t border-slate-100 pt-5">
@@ -175,24 +205,42 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
 
       {details && (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
             <Tile label="Recipients" value={details.recipients.length} />
-            <Tile label="Sent" value={details.sent} tone="text-emerald-600" />
-            <Tile
-              label="Failed"
-              value={details.failed}
-              tone={details.failed > 0 ? "text-red-600" : "text-slate-900"}
-            />
-            <Tile label="Waiting" value={details.pending} />
-            <Tile label="Opted out" value={details.optedOut} />
+
+            {showsRead && (
+              <Tile
+                label="Read"
+                value={`${details.readCount} / ${details.total}`}
+                tone="text-indigo-600"
+              />
+            )}
+
+            {showsEmail && (
+              <>
+                <Tile label="Emailed" value={details.sent} tone="text-emerald-600" />
+                <Tile
+                  label="Failed"
+                  value={details.failed}
+                  tone={details.failed > 0 ? "text-red-600" : "text-slate-900"}
+                />
+                <Tile label="Waiting" value={details.pending} />
+              </>
+            )}
+
+            {details.optedOut > 0 && (
+              <Tile label="Opted out of email" value={details.optedOut} />
+            )}
           </div>
 
-          <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-            &quot;Sent&quot; means the mail server accepted the email. If an
-            address doesn&apos;t exist, a bounce notice (&quot;Mail Delivery
-            Subsystem&quot;) arrives in the sending Gmail inbox.
-          </p>
-          
+          {showsEmail && (
+            <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+              &quot;Emailed&quot; means the mail server accepted the email. If
+              an address doesn&apos;t exist, a bounce notice (&quot;Mail
+              Delivery Subsystem&quot;) arrives in the sending Gmail inbox.
+            </p>
+          )}
+
           <details className="text-sm">
             <summary className="cursor-pointer select-none font-semibold text-indigo-600 hover:text-indigo-700">
               View message
@@ -209,7 +257,7 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
               aria-label="Filter recipients"
               className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1"
             >
-              {FILTERS.map((item) => (
+              {filters.map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -221,7 +269,7 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  {item.label} ({counts[item.id]})
+                  {item.label} ({item.count})
                 </button>
               ))}
             </div>
@@ -297,24 +345,50 @@ export default function AnnouncementDetails({ announcementId, onChanged }) {
                       </p>
 
                       {recipient.reason && (
-                        <p className="mt-1 text-xs text-red-600">
+                        <p
+                          className={`mt-1 text-xs ${
+                            recipient.status === "failed"
+                              ? "text-red-600"
+                              : "text-slate-500"
+                          }`}
+                        >
                           {recipient.reason}
                         </p>
                       )}
 
                       {recipient.status === "sent" && recipient.sentAt && (
                         <p className="mt-1 text-xs text-slate-400">
-                          Sent {new Date(recipient.sentAt).toLocaleString()}
+                          Emailed {new Date(recipient.sentAt).toLocaleString()}
+                        </p>
+                      )}
+
+                      {showsRead && (
+                        <p
+                          className={`mt-1 text-xs ${
+                            recipient.read
+                              ? "text-emerald-600"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {recipient.read
+                            ? `Read ${
+                                recipient.readAt
+                                  ? new Date(recipient.readAt).toLocaleString()
+                                  : ""
+                              }`
+                            : "Not read yet"}
                         </p>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}
-                      >
-                        {badge.label}
-                      </span>
+                      {showsEmail && (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      )}
 
                       {recipient.status === "failed" && !details.isRunning && (
                         <button

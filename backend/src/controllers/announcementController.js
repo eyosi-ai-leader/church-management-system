@@ -41,13 +41,19 @@ const searchMembers = handle(async (req, res) => {
     search: req.query.search,
     ministryId: req.query.ministryId,
     page: req.query.page,
+    delivery: req.query.delivery,
   });
 
   return successResponse(res, "Members retrieved", data);
 });
 
 const preview = handle(async (req, res) => {
-  const data = await service.previewAudience(req.user, req.body.audience);
+  const data = await service.previewAudience(
+    req.user,
+    req.body.audience,
+    req.body.delivery
+  );
+
   return successResponse(res, "Audience previewed", data);
 });
 
@@ -61,7 +67,7 @@ const create = handle(async (req, res) => {
 
   return successResponse(
     res,
-    "Your announcement is being sent.",
+    "Your announcement has been published.",
     data,
     202
   );

@@ -27,6 +27,7 @@ import {
 import { getRoleName, ROLES } from "@/lib/roles";
 import { getStoredUser } from "@/lib/userStorage";
 import UserAvatar from "@/components/shared/Avatar/UserAvatar";
+import NotificationBell from "@/components/dashboard/notifications/NotificationBell";
 
 const navigationByRole = {
   [ROLES.ADMIN]: [
@@ -138,7 +139,7 @@ const quickActionsByRole = {
       icon: CalendarDays,
     },
         { name: "Announcements",
-           href: "/dashboard/announcements",
+                 href: "/dashboard/announcements?tab=compose",
             icon: Megaphone
            },
   ],
@@ -159,7 +160,9 @@ const quickActionsByRole = {
       href: "/dashboard/events",
       icon: CalendarDays,
     },
-        { name: "Announcements", href: "/dashboard/announcements", icon: Megaphone },
+        { name: "Announcements", 
+          href: "/dashboard/announcements?tab=compose", 
+          icon: Megaphone },
   ],
 
   [ROLES.CHURCH_ELDER]: [
@@ -173,6 +176,7 @@ const quickActionsByRole = {
       href: "/dashboard/ministries",
       icon: Church,
     },
+        { name: "Announcements", href: "/dashboard/announcements", icon: Megaphone },
     {
       name: "View Insights",
       href: "/dashboard/insights",
@@ -193,7 +197,7 @@ const quickActionsByRole = {
     },
         {
       name: "Send Announcement",
-      href: "/dashboard/announcements",
+            href: "/dashboard/announcements?tab=compose",
       icon: Megaphone,
     },
   ],
@@ -501,52 +505,8 @@ export default function DashboardHeader() {
           )}
         </div>
 
-        {/* Notifications */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={handleNotificationToggle}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${
-              activeMenu === "notifications"
-                ? "bg-slate-100 text-slate-900"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
-
-          {activeMenu === "notifications" && (
-            <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-900">
-                  Notifications
-                </p>
-
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                  Coming Soon
-                </span>
-              </div>
-
-              <div className="py-6 text-center">
-                <Bell
-                  size={22}
-                  className="mx-auto text-slate-300"
-                />
-
-                <p className="mt-2 text-sm font-medium text-slate-600">
-                  No new notifications
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Notifications will appear here.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+                {/* Notifications */}
+        <NotificationBell />
 
                 {/* Account */}
         <div className="relative">

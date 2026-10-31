@@ -139,6 +139,11 @@ const navigationByRole = {
           href: "/dashboard/events",
           icon: CalendarDays,
         },
+                {
+          name: "Announcements",
+          href: "/dashboard/announcements",
+          icon: Megaphone,
+        },
       ],
     },
     {
@@ -173,6 +178,11 @@ const navigationByRole = {
           href: "/dashboard/events",
           icon: CalendarDays,
         },
+         {
+          name: "Announcements",
+          href: "/dashboard/announcements",
+          icon: Megaphone,
+        },
       ],
     },
     {
@@ -184,11 +194,7 @@ const navigationByRole = {
           icon: Activity,
           comingSoon: true,
         },
-        {
-          name: "Announcements",
-          href: "/dashboard/announcements",
-          icon: Megaphone,
-        },
+       
       ],
     },
     {
@@ -240,7 +246,7 @@ const navigationByRole = {
           name: "Announcements",
           href: "/dashboard/announcements",
           icon: Megaphone,
-          comingSoon: true,
+
         },
       ],
     },

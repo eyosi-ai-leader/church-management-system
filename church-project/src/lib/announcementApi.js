@@ -46,18 +46,27 @@ async function request(path, { method = "GET", body } = {}) {
 
 export const getAudienceOptions = () => request("/announcements/options");
 
-export const searchMembers = ({ search = "", ministryId = "", page = 1 } = {}) => {
+export const searchMembers = ({
+  search = "",
+  ministryId = "",
+  page = 1,
+  delivery = "both",
+} = {}) => {
   const params = new URLSearchParams();
 
   if (search) params.set("search", search);
   if (ministryId) params.set("ministryId", String(ministryId));
   params.set("page", String(page));
+  params.set("delivery", delivery);
 
   return request(`/announcements/members?${params.toString()}`);
 };
 
-export const previewAudience = (audience) =>
-  request("/announcements/preview", { method: "POST", body: { audience } });
+export const previewAudience = (audience, delivery = "both") =>
+  request("/announcements/preview", {
+    method: "POST",
+    body: { audience, delivery },
+  });
 
 export const sendTestAnnouncement = ({ subject, message }) =>
   request("/announcements/test", {
@@ -65,10 +74,15 @@ export const sendTestAnnouncement = ({ subject, message }) =>
     body: { subject, message },
   });
 
-export const createAnnouncement = ({ subject, message, audience }) =>
+export const createAnnouncement = ({
+  subject,
+  message,
+  audience,
+  delivery = "both",
+}) =>
   request("/announcements", {
     method: "POST",
-    body: { subject, message, audience },
+    body: { subject, message, audience, delivery },
   });
 
 export const listAnnouncements = ({ search = "", page = 1 } = {}) => {
@@ -80,11 +94,11 @@ export const listAnnouncements = ({ search = "", page = 1 } = {}) => {
   return request(`/announcements?${params.toString()}`);
 };
 
-export const deleteAnnouncement = (id) =>
-  request(`/announcements/${id}`, { method: "DELETE" });
-
 export const getAnnouncementDetails = (id) =>
   request(`/announcements/${id}`);
+
+export const deleteAnnouncement = (id) =>
+  request(`/announcements/${id}`, { method: "DELETE" });
 
 export const retryAnnouncement = (id) =>
   request(`/announcements/${id}/retry`, { method: "POST" });

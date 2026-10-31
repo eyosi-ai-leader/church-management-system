@@ -1,8 +1,15 @@
 const { body, param, query } = require("express-validator");
 
+const DELIVERY_VALUES = ["both", "dashboard", "email"];
+
 const audienceRule = body("audience")
   .isObject()
   .withMessage("Choose who should receive this announcement.");
+
+const deliveryRule = body("delivery")
+  .optional()
+  .isIn(DELIVERY_VALUES)
+  .withMessage("Choose how to deliver this announcement.");
 
 const subjectRule = body("subject")
   .trim()
@@ -20,9 +27,14 @@ const messageRule = body("message")
 
 const idRule = param("id").isInt({ min: 1 }).withMessage("Invalid announcement");
 
-const previewValidator = [audienceRule];
+const previewValidator = [audienceRule, deliveryRule];
 const testValidator = [subjectRule, messageRule];
-const createAnnouncementValidator = [subjectRule, messageRule, audienceRule];
+const createAnnouncementValidator = [
+  subjectRule,
+  messageRule,
+  audienceRule,
+  deliveryRule,
+];
 
 const retryValidator = [idRule];
 const detailsValidator = [idRule];
@@ -46,6 +58,10 @@ const membersQueryValidator = [
     .optional({ values: "falsy" })
     .isInt({ min: 1, max: 1000 })
     .withMessage("Invalid page"),
+  query("delivery")
+    .optional({ values: "falsy" })
+    .isIn(DELIVERY_VALUES)
+    .withMessage("Invalid delivery"),
 ];
 
 const listQueryValidator = [

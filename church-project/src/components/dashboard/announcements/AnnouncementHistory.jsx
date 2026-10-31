@@ -27,6 +27,17 @@ const STATUS = {
   failed: { label: "Failed", className: "bg-red-50 text-red-700" },
 };
 
+const IN_DASHBOARD = {
+  label: "In dashboard",
+  className: "bg-emerald-50 text-emerald-700",
+};
+
+const DELIVERY_LABEL = {
+  both: "Dashboard + email",
+  dashboard: "Dashboard only",
+  email: "Email only",
+};
+
 export default function AnnouncementHistory() {
   const [items, setItems] = useState(null);
   const [total, setTotal] = useState(0);
@@ -249,10 +260,19 @@ export default function AnnouncementHistory() {
       )}
 
       {items?.map((item) => {
-        const status = STATUS[item.status] || STATUS.sending;
+        const hasEmails = item.emailTotal > 0;
+        const dashboardOnly = item.delivery !== "email" && !hasEmails;
+        const showsInDashboard = item.delivery !== "email";
+
+        const status = dashboardOnly
+          ? IN_DASHBOARD
+          : STATUS[item.status] || STATUS.sending;
+
         const done = item.sent + item.failed;
-        const percent =
-          item.total > 0 ? Math.round((done / item.total) * 100) : 0;
+        const percent = hasEmails
+          ? Math.round((done / item.emailTotal) * 100)
+          : 0;
+
         const expanded = expandedId === item.id;
         const confirming = confirmId === item.id;
         const isSending = item.status === "sending";
@@ -269,8 +289,8 @@ export default function AnnouncementHistory() {
                 </h3>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  {item.audience} · by {item.sender} ·{" "}
-                  {new Date(item.createdAt).toLocaleString()}
+                  {item.audience} · {DELIVERY_LABEL[item.delivery]} · by{" "}
+                  {item.sender} · {new Date(item.createdAt).toLocaleString()}
                 </p>
               </div>
 
@@ -282,24 +302,31 @@ export default function AnnouncementHistory() {
             </div>
 
             <div className="mt-4">
-              <div
-                role="progressbar"
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Sending progress"
-                className="h-2 overflow-hidden rounded-full bg-slate-100"
-              >
+              {hasEmails && (
                 <div
-                  className="h-full rounded-full bg-slate-900 transition-all"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
+                  role="progressbar"
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Email sending progress"
+                  className="h-2 overflow-hidden rounded-full bg-slate-100"
+                >
+                  <div
+                    className="h-full rounded-full bg-slate-900 transition-all"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+              )}
 
-              <p className="mt-2 text-xs text-slate-500">
-                {item.sent} of {item.total} sent
-                {item.failed > 0 && ` · ${item.failed} failed`}
-                {item.optedOut > 0 && ` · ${item.optedOut} opted out`}
+              <p className={`${hasEmails ? "mt-2" : ""} text-xs text-slate-500`}>
+                {hasEmails &&
+                  `${item.sent} of ${item.emailTotal} emailed${
+                    item.failed > 0 ? ` · ${item.failed} failed` : ""
+                  }`}
+                {hasEmails && showsInDashboard && " · "}
+                {showsInDashboard &&
+                  `${item.readCount} of ${item.total} read in the dashboard`}
+                {item.optedOut > 0 && ` · ${item.optedOut} opted out of email`}
               </p>
             </div>
 
@@ -365,8 +392,10 @@ export default function AnnouncementHistory() {
                 </p>
 
                 <p className="mt-1 text-sm text-red-800">
-                  It will be removed from this list. Emails that were already
-                  sent can&apos;t be recalled.
+                  {showsInDashboard
+                    ? "It will be removed from this list and from every member's dashboard and notifications. "
+                    : "It will be removed from this list. "}
+                  Emails that were already sent can&apos;t be recalled.
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-3">

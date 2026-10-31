@@ -26,6 +26,8 @@ const profileRoutes = require("./routes/profileRoutes");
 
 const announcementRoutes = require("./routes/announcementRoutes");
 
+const inboxRoutes = require("./routes/inboxRoutes");
+
 const app = express();
 
 // Security
@@ -75,6 +77,8 @@ app.use("/api/prayer-requests", prayerRequestRoutes);
 app.use("/api/profile", profileRoutes);
 
 app.use("/api/announcements", announcementRoutes);
+
+app.use("/api/inbox", inboxRoutes);
 /**
  * Global Error Handler
  *

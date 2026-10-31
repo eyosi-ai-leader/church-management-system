@@ -1,17 +1,24 @@
 const db = require("../config/db");
 
 /*
- * Members who can ever receive an announcement:
- * active member, active account, verified email.
- * (The opt-out flag is checked separately so we can report it.)
+ * Anyone who can see an announcement in the dashboard:
+ * active member with an enabled account.
  */
-const ELIGIBLE_BASE = `
+const ACTIVE_BASE = `
   FROM members m
   INNER JOIN users u ON u.id = m.user_id
   WHERE m.status = 'Active'
     AND (u.is_active IS NULL OR u.is_active = 1)
-    AND u.email_verified_at IS NOT NULL
 `;
+
+const VERIFIED = " AND u.email_verified_at IS NOT NULL";
+
+/*
+ * "Email only" announcements need a verified address.
+ * Anything shown in the dashboard does not.
+ */
+const baseFor = (delivery) =>
+  delivery === "email" ? `${ACTIVE_BASE}${VERIFIED}` : ACTIVE_BASE;
 
 const IN_MINISTRIES = `
   AND m.id IN (
@@ -28,13 +35,21 @@ const SUMMARY_SELECT = `
     a.subject,
     a.message,
     a.audience_label,
+    a.delivery,
     a.status,
     a.total_recipients,
+    a.email_total,
     a.sent_count,
     a.failed_count,
     a.skipped_opted_out,
     a.created_at,
     a.completed_at,
+    (
+      SELECT COUNT(*)
+      FROM announcement_recipients rr
+      WHERE rr.announcement_id = a.id
+        AND rr.read_at IS NOT NULL
+    ) AS read_count,
     u.first_name,
     u.last_name
   FROM announcements a
@@ -101,14 +116,17 @@ const getMinistryNames = async (ids) => {
 };
 
 /*
- * Browse or search eligible members, one page at a time.
+ * Browse or search members who can be reached, one page at a time.
  */
 const searchMembers = async ({
   search = "",
   ministryIds = null,
   limit = 25,
   offset = 0,
+  delivery = "both",
 }) => {
+  const base = baseFor(delivery);
+
   let conditions = "";
   const params = [];
 
@@ -133,7 +151,7 @@ const searchMembers = async ({
   }
 
   const [countRows] = await db.query(
-    `SELECT COUNT(*) AS total ${ELIGIBLE_BASE} ${conditions}`,
+    `SELECT COUNT(*) AS total ${base} ${conditions}`,
     params
   );
 
@@ -145,7 +163,7 @@ const searchMembers = async ({
         u.first_name,
         u.last_name,
         u.email
-      ${ELIGIBLE_BASE}
+      ${base}
       ${conditions}
       ORDER BY u.first_name, u.last_name, m.id
       LIMIT ${Number(limit)} OFFSET ${Number(offset)}
@@ -156,19 +174,115 @@ const searchMembers = async ({
   return { rows, total: Number(countRows[0]?.total || 0) };
 };
 
+/*
+ * Totals that explain why fewer people can be reached than appear
+ * in the Members table. "active" and "inactive" never overlap.
+ */
+const getMemberStats = async ({ restrictMinistryIds = null } = {}) => {
+  let sql = `
+    SELECT
+      COUNT(*) AS total,
+      SUM(m.status <> 'Active' OR COALESCE(u.is_active, 1) = 0) AS inactive,
+      SUM(
+        m.status = 'Active'
+        AND COALESCE(u.is_active, 1) = 1
+      ) AS active,
+      SUM(
+        m.status = 'Active'
+        AND COALESCE(u.is_active, 1) = 1
+        AND u.email_verified_at IS NULL
+      ) AS not_verified
+    FROM members m
+    INNER JOIN users u ON u.id = m.user_id
+    WHERE 1 = 1
+  `;
+
+  const params = [];
+
+  if (restrictMinistryIds) {
+    sql += IN_MINISTRIES;
+    params.push(restrictMinistryIds);
+  }
+
+  const [rows] = await db.query(sql, params);
+  const row = rows[0] || {};
+
+  return {
+    total: Number(row.total || 0),
+    inactive: Number(row.inactive || 0),
+    active: Number(row.active || 0),
+    notVerified: Number(row.not_verified || 0),
+  };
+};
+
+/*
+ * Members that match a search but cannot be reached,
+ * so the picker can explain why they are missing.
+ */
+const searchIneligibleMembers = async ({
+  search,
+  ministryIds = null,
+  limit = 5,
+  delivery = "both",
+}) => {
+  const term = `%${search}%`;
+
+  const reachable =
+    delivery === "email"
+      ? `m.status = 'Active' AND COALESCE(u.is_active, 1) = 1 AND u.email_verified_at IS NOT NULL`
+      : `m.status = 'Active' AND COALESCE(u.is_active, 1) = 1`;
+
+  let sql = `
+    SELECT
+      m.id,
+      m.member_number,
+      m.status AS member_status,
+      u.first_name,
+      u.last_name,
+      u.email,
+      u.is_active,
+      u.email_verified_at
+    FROM members m
+    INNER JOIN users u ON u.id = m.user_id
+    WHERE NOT (${reachable})
+    AND (
+      u.first_name LIKE ?
+      OR u.last_name LIKE ?
+      OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
+      OR u.email LIKE ?
+      OR m.member_number LIKE ?
+    )
+  `;
+
+  const params = [term, term, term, term, term];
+
+  if (ministryIds) {
+    sql += IN_MINISTRIES;
+    params.push(ministryIds);
+  }
+
+  sql += ` ORDER BY u.first_name, u.last_name LIMIT ${Number(limit)}`;
+
+  const [rows] = await db.query(sql, params);
+
+  return rows;
+};
+
 const resolveRecipients = async ({
   type,
   ministryIds = [],
   memberIds = [],
   restrictMinistryIds = null,
+  delivery = "both",
 }) => {
   let sql = `
     SELECT DISTINCT
       u.id AS user_id,
       u.email,
       u.first_name,
-      u.announcement_emails
-    ${ELIGIBLE_BASE}
+      u.announcement_emails,
+      u.email_verified_at
+    ${baseFor(delivery)}
   `;
 
   const params = [];
@@ -194,7 +308,8 @@ const resolveRecipients = async ({
 };
 
 /*
- * Recipients already planned or sent today (counts toward the daily cap).
+ * Emails already planned or sent today (counts toward the daily cap).
+ * Dashboard-only recipients are "skipped" and are not counted.
  */
 const countPlannedToday = async () => {
   const [rows] = await db.execute(
@@ -210,18 +325,25 @@ const countPlannedToday = async () => {
   return Number(rows[0]?.total || 0);
 };
 
+/*
+ * recipients: [{ userId, emailStatus: 'pending' | 'skipped', read: boolean }]
+ */
 const createAnnouncementWithRecipients = async ({
   createdBy,
   subject,
   message,
   audienceLabel,
+  delivery,
   recipients,
+  emailTotal,
   skippedOptedOut,
 }) => {
   const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
+
+    const noEmails = emailTotal === 0;
 
     const [result] = await connection.execute(
       `
@@ -230,26 +352,41 @@ const createAnnouncementWithRecipients = async ({
           subject,
           message,
           audience_label,
+          delivery,
           total_recipients,
-          skipped_opted_out
+          email_total,
+          skipped_opted_out,
+          status,
+          completed_at
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         createdBy,
         subject,
         message,
         audienceLabel,
+        delivery,
         recipients.length,
+        emailTotal,
         skippedOptedOut,
+        noEmails ? "sent" : "sending",
+        noEmails ? new Date() : null,
       ]
     );
 
     const announcementId = result.insertId;
 
     await connection.query(
-      "INSERT INTO announcement_recipients (announcement_id, user_id) VALUES ?",
-      [recipients.map((recipient) => [announcementId, recipient.user_id])]
+      "INSERT INTO announcement_recipients (announcement_id, user_id, status, read_at) VALUES ?",
+      [
+        recipients.map((recipient) => [
+          announcementId,
+          recipient.userId,
+          recipient.emailStatus,
+          recipient.read ? new Date() : null,
+        ]),
+      ]
     );
 
     await connection.commit();
@@ -296,7 +433,7 @@ const getAnnouncementBasic = async (id) => {
 };
 
 const getAnnouncementById = async (id) => {
-    const [rows] = await db.query(
+  const [rows] = await db.query(
     `${SUMMARY_SELECT} WHERE a.id = ? AND a.deleted_at IS NULL LIMIT 1`,
     [id]
   );
@@ -312,14 +449,17 @@ const getRecipients = async (announcementId) => {
         ar.status,
         ar.error,
         ar.sent_at,
+        ar.read_at,
         u.first_name,
         u.last_name,
-        u.email
+        u.email,
+        u.announcement_emails,
+        u.email_verified_at
       FROM announcement_recipients ar
       INNER JOIN users u ON u.id = ar.user_id
       WHERE ar.announcement_id = ?
       ORDER BY
-        FIELD(ar.status, 'failed', 'pending', 'sent'),
+        FIELD(ar.status, 'failed', 'pending', 'sent', 'skipped'),
         u.first_name,
         u.last_name
     `,
@@ -489,99 +629,6 @@ const getUserContact = async (userId) => {
   return rows[0] || null;
 };
 
-/*
- * Totals that explain why fewer people can receive announcements
- * than appear in the Members table. The three groups never overlap.
- */
-const getMemberStats = async ({ restrictMinistryIds = null } = {}) => {
-  let sql = `
-    SELECT
-      COUNT(*) AS total,
-      SUM(m.status <> 'Active' OR COALESCE(u.is_active, 1) = 0) AS inactive,
-      SUM(
-        m.status = 'Active'
-        AND COALESCE(u.is_active, 1) = 1
-        AND u.email_verified_at IS NULL
-      ) AS not_verified,
-      SUM(
-        m.status = 'Active'
-        AND COALESCE(u.is_active, 1) = 1
-        AND u.email_verified_at IS NOT NULL
-      ) AS eligible
-    FROM members m
-    INNER JOIN users u ON u.id = m.user_id
-    WHERE 1 = 1
-  `;
-
-  const params = [];
-
-  if (restrictMinistryIds) {
-    sql += IN_MINISTRIES;
-    params.push(restrictMinistryIds);
-  }
-
-  const [rows] = await db.query(sql, params);
-  const row = rows[0] || {};
-
-  return {
-    total: Number(row.total || 0),
-    inactive: Number(row.inactive || 0),
-    notVerified: Number(row.not_verified || 0),
-    eligible: Number(row.eligible || 0),
-  };
-};
-
-/*
- * Members that match a search but cannot receive announcements,
- * so the picker can explain why they are missing.
- */
-const searchIneligibleMembers = async ({
-  search,
-  ministryIds = null,
-  limit = 5,
-}) => {
-  const term = `%${search}%`;
-
-  let sql = `
-    SELECT
-      m.id,
-      m.member_number,
-      m.status AS member_status,
-      u.first_name,
-      u.last_name,
-      u.email,
-      u.is_active,
-      u.email_verified_at
-    FROM members m
-    INNER JOIN users u ON u.id = m.user_id
-    WHERE NOT (
-      m.status = 'Active'
-      AND COALESCE(u.is_active, 1) = 1
-      AND u.email_verified_at IS NOT NULL
-    )
-    AND (
-      u.first_name LIKE ?
-      OR u.last_name LIKE ?
-      OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?
-      OR u.email LIKE ?
-      OR m.member_number LIKE ?
-    )
-  `;
-
-  const params = [term, term, term, term, term];
-
-  if (ministryIds) {
-    sql += IN_MINISTRIES;
-    params.push(ministryIds);
-  }
-
-  sql += ` ORDER BY u.first_name, u.last_name LIMIT ${Number(limit)}`;
-
-  const [rows] = await db.query(sql, params);
-
-  return rows;
-};
-
 module.exports = {
   getLedMinistries,
   getMinistries,
@@ -604,6 +651,5 @@ module.exports = {
   resetRecipientToPending,
   listAnnouncements,
   softDeleteAnnouncement,
-  markAnnouncementSending,
   getUserContact,
 };
