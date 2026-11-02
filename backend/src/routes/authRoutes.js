@@ -19,6 +19,10 @@ const {
 } = require("../controllers/changePasswordController");
 
 const {
+  googleSignIn,
+} = require("../controllers/googleAuthController");
+
+const {
   uploadProfileImage,
 } = require("../middleware/uploadMiddleware");
 
@@ -44,6 +48,10 @@ const {
   changePasswordValidator,
 } = require("../validators/changePasswordValidator");
 
+const {
+  googleAuthValidator,
+} = require("../validators/googleAuthValidator");
+
 const limiter = (windowMs, limit, keyGenerator) =>
   rateLimit({
     windowMs,
@@ -62,6 +70,7 @@ const verifyLimiter = limiter(15 * 60 * 1000, 10);
 const resendLimiter = limiter(60 * 60 * 1000, 5);
 const forgotLimiter = limiter(60 * 60 * 1000, 5);
 const resetLimiter = limiter(15 * 60 * 1000, 10);
+const googleLimiter = limiter(15 * 60 * 1000, 30);
 // Counted per signed-in user (authMiddleware runs first).
 const changePasswordLimiter = limiter(15 * 60 * 1000, 5, (req) =>
   `user-${req.user.id}`
@@ -103,6 +112,13 @@ router.post(
   "/login",
   loginValidator,
   login
+);
+
+router.post(
+  "/google",
+  googleLimiter,
+  googleAuthValidator,
+  googleSignIn
 );
 
 router.post(
