@@ -16,6 +16,9 @@ const memberIdValidator = [
  *
  * Member number is intentionally NOT included.
  * It is generated automatically by the backend.
+ *
+ * There is no password: the member chooses their own through
+ * the invitation link that is emailed to them.
  */
 const createMemberValidator = [
   body("firstName")
@@ -61,16 +64,6 @@ const createMemberValidator = [
     .isLength({ max: 255 })
     .withMessage(
       "Email must not exceed 255 characters"
-    ),
-
-  body("password")
-    .notEmpty()
-    .withMessage(
-      "Password is required"
-    )
-    .isLength({ min: 6 })
-    .withMessage(
-      "Password must be at least 6 characters"
     ),
 
   body("phone")

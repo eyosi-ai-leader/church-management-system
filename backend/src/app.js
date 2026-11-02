@@ -28,6 +28,10 @@ const announcementRoutes = require("./routes/announcementRoutes");
 
 const inboxRoutes = require("./routes/inboxRoutes");
 
+const memberAccessRoutes = require("./routes/memberAccessRoutes");
+
+const invitationRoutes = require("./routes/invitationRoutes");
+
 const app = express();
 
 // Security
@@ -79,6 +83,10 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/announcements", announcementRoutes);
 
 app.use("/api/inbox", inboxRoutes);
+
+app.use("/api/member-access", memberAccessRoutes);
+
+app.use("/api/invitations", invitationRoutes);
 /**
  * Global Error Handler
  *

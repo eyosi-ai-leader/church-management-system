@@ -12,6 +12,10 @@ const {
   isEmailVerified,
 } = require("../models/userVerificationModel");
 
+const {
+  recordLogin,
+} = require("../models/userActivityModel");
+
 /**
  * Register a new public church member.
  *
@@ -158,6 +162,11 @@ const loginUser = async (
 
     throw error;
   }
+
+  // Remember that this person has signed in (used by Member Access).
+  await recordLogin(user.id).catch((error) => {
+    console.error("Failed to record login:", error.message);
+  });
 
   const {
     generateToken,

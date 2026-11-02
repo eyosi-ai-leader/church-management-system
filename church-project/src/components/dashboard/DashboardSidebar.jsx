@@ -21,6 +21,7 @@ import {
   Crown,
   Eye,
   BriefcaseBusiness,
+  KeyRound,
 } from "lucide-react";
 
 import { getRoleName, ROLES } from "@/lib/roles";
@@ -55,6 +56,11 @@ const navigationByRole = {
           name: "Announcements",
           href: "/dashboard/announcements",
           icon: Megaphone,
+        },
+                {
+          name: "Member Access",
+          href: "/dashboard/account-access",
+          icon: KeyRound,
         },
       ],
     },
@@ -99,6 +105,11 @@ const navigationByRole = {
           name: "Announcements",
           href: "/dashboard/announcements",
           icon: Megaphone,
+        },
+                {
+          name: "Member Access",
+          href: "/dashboard/account-access",
+          icon: KeyRound,
         },
       ],
     },

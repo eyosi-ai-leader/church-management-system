@@ -1,5 +1,8 @@
+const crypto = require("crypto");
+
 const memberService = require("../services/memberService");
-const { markEmailVerified } = require("../models/userVerificationModel");
+const { deliverInvitation } = require("../services/invitationEmailService");
+const normalizeEmail = require("../utils/normalizeEmail");
 
 const {
   successResponse,
@@ -8,6 +11,10 @@ const {
 
 /**
  * Create member
+ *
+ * The admin does not choose a password. The account is created with a
+ * random one nobody knows, and an invitation email lets the member set
+ * their own. Their email counts as verified once they do.
  */
 const createMember = async (req, res) => {
   try {
@@ -17,7 +24,6 @@ const createMember = async (req, res) => {
       lastName,
       email,
       phone,
-      password,
       roleId,
       gender,
       dateOfBirth,
@@ -83,25 +89,6 @@ const createMember = async (req, res) => {
     }
 
     if (
-      typeof password !== "string" ||
-      !password
-    ) {
-      return errorResponse(
-        res,
-        "Password is required",
-        400
-      );
-    }
-
-    if (password.length < 6) {
-      return errorResponse(
-        res,
-        "Password must be at least 6 characters",
-        400
-      );
-    }
-
-    if (
       roleId === undefined ||
       roleId === null ||
       !Number.isInteger(Number(roleId)) ||
@@ -143,6 +130,18 @@ const createMember = async (req, res) => {
       );
     }
 
+    /*
+     * Same form the login page looks up, so the member can sign in
+     * (for example, Gmail dots and capital letters are removed).
+     */
+    const normalizedEmail = normalizeEmail(email);
+
+    const memberStatus =
+      status !== undefined &&
+      status !== ""
+        ? status
+        : "Active";
+
     const result =
       await memberService.createMember(
         {
@@ -156,7 +155,7 @@ const createMember = async (req, res) => {
 
           lastName: lastName.trim(),
 
-          email: email.trim(),
+          email: normalizedEmail,
 
           phone:
             phone !== undefined &&
@@ -165,7 +164,8 @@ const createMember = async (req, res) => {
               ? phone.trim()
               : null,
 
-          password,
+          // Random and unknown to everyone: the member sets their own.
+          password: crypto.randomBytes(32).toString("hex"),
 
           roleId: Number(roleId),
 
@@ -188,24 +188,46 @@ const createMember = async (req, res) => {
               ? address.trim()
               : null,
 
-          status:
-            status !== undefined &&
-            status !== ""
-              ? status
-              : "Active",
+          status: memberStatus,
         },
 
         req.file || null
       );
 
-       await markEmailVerified(result.userId);
+    let invitationSent = false;
+
+    if (memberStatus === "Active") {
+      try {
+        await deliverInvitation({
+          userId: result.userId,
+          firstName: firstName.trim(),
+          email: normalizedEmail,
+          inviterId: req.user.id,
+        });
+
+        invitationSent = true;
+      } catch (error) {
+        console.error(
+          "Failed to send invitation email:",
+          error.message
+        );
+      }
+    }
+
+    const message = invitationSent
+      ? "Member created. An invitation email was sent so they can set their password."
+      : memberStatus !== "Active"
+      ? "Member created. No invitation was sent because the member is inactive."
+      : 'Member created, but the invitation email could not be sent. Open "Member Access" to resend it.';
+
     return successResponse(
       res,
-      "Member created successfully",
+      message,
       {
         memberId: result.memberId,
         userId: result.userId,
         memberNumber: result.memberNumber,
+        invitationSent,
       },
       201
     );
@@ -423,7 +445,7 @@ const updateMember = async (req, res) => {
 
         email:
           email !== undefined
-            ? email.trim()
+            ? normalizeEmail(email)
             : undefined,
 
         phone:

@@ -8,6 +8,7 @@ const welcomeEmail = require("../templates/emails/welcomeEmail");
 const { generateToken } = require("../utils/jwt");
 const env = require("../config/env");
 const model = require("../models/userGoogleModel");
+const { recordLogin } = require("../models/userActivityModel");
 
 const SALT_ROUNDS = 10;
 
@@ -211,9 +212,13 @@ const signInWithGoogle = async (credential) => {
 
   assertActive(user);
 
-  if (isNew) sendWelcome(user);
+    if (isNew) sendWelcome(user);
 
-  return { ...toSession(user), isNew };
+  await recordLogin(user.id).catch((error) => {
+    console.error("Failed to record login:", error.message);
+  });
+
+  return { ...toSession(user), isNew }; 
 };
 
 module.exports = {
