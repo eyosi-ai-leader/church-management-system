@@ -188,6 +188,11 @@ const getMemberById = async (
       u.phone AS user_phone,
       u.profile_image,
 
+      u.last_login_at,
+      u.email_verified_at,
+      u.invited_at,
+      u.invite_count,
+
       m.gender,
       m.phone,
       m.date_of_birth,
@@ -445,6 +450,10 @@ const getAllMembers = async ({
       u.phone AS user_phone,
       u.profile_image,
 
+      u.last_login_at,
+      u.email_verified_at,
+      u.invited_at,
+
       m.gender,
       m.phone,
       m.date_of_birth,
@@ -549,31 +558,6 @@ const getAllMembers = async ({
       ? "DESC"
       : "ASC";
 
-  // query += `
-  //   ORDER BY ${sortColumn} ${sortDirection}
-  //   LIMIT ? OFFSET ?
-  // `;
-
-  /**
-   * Always provide actual numeric values
-   * to mysql2 for LIMIT/OFFSET.
-   *
-   * This prevents undefined bind parameters.
-   */
-//   queryParams.push(
-//     Number(limit),
-//     Number(offset)
-//   );
-
-//   const [rows] =
-//     await db.execute(
-//       query,
-//       queryParams
-//     );
-
-//   return rows;
-// };
-
   const safeLimit = Number.parseInt(limit, 10);
   const safeOffset = Number.parseInt(offset, 10);
 
@@ -593,11 +577,10 @@ const getAllMembers = async ({
     LIMIT ${safeLimit} OFFSET ${safeOffset}
   `;
 
-  console.log("NEW eyosi  CODE RUNNING: ", query);
-
   const [rows] = await db.query(query, queryParams);
 
-  return rows  };
+  return rows;
+};
 /**
  * Count members
  *

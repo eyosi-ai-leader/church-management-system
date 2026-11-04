@@ -1,8 +1,13 @@
 const crypto = require("crypto");
 
 const memberService = require("../services/memberService");
+const memberAccessService = require("../services/memberAccessService");
 const { deliverInvitation } = require("../services/invitationEmailService");
 const normalizeEmail = require("../utils/normalizeEmail");
+const { TOKEN_TYPES } = require("../utils/accountToken");
+const {
+  deleteUnusedTokensByUserAndType,
+} = require("../models/accountTokenModel");
 
 const {
   successResponse,
@@ -13,8 +18,8 @@ const {
  * Create member
  *
  * The admin does not choose a password. The account is created with a
- * random one nobody knows, and an invitation email lets the member set
- * their own. Their email counts as verified once they do.
+ * random one nobody knows, and (if requested) an invitation email lets
+ * the member set their own. Their email counts as verified once they do.
  */
 const createMember = async (req, res) => {
   try {
@@ -30,6 +35,7 @@ const createMember = async (req, res) => {
       baptismDate,
       address,
       status,
+      sendInvitation,
     } = req.body;
 
     if (
@@ -102,6 +108,18 @@ const createMember = async (req, res) => {
       );
     }
 
+    // Only an administrator can create another administrator.
+    if (
+      Number(roleId) === 1 &&
+      Number(req.user.roleId) !== 1
+    ) {
+      return errorResponse(
+        res,
+        "Only an administrator can create an administrator account.",
+        403
+      );
+    }
+
     if (
       gender !== undefined &&
       gender !== null &&
@@ -141,6 +159,22 @@ const createMember = async (req, res) => {
       status !== ""
         ? status
         : "Active";
+
+    /*
+     * The admin decides whether to send the invitation now.
+     * It defaults to "yes", and never applies to inactive members.
+     */
+    const wantsInvitation =
+      sendInvitation === undefined ||
+      sendInvitation === null ||
+      sendInvitation === ""
+        ? true
+        : sendInvitation === true ||
+          sendInvitation === "true";
+
+    const invitationRequested =
+      wantsInvitation &&
+      memberStatus === "Active";
 
     const result =
       await memberService.createMember(
@@ -196,7 +230,7 @@ const createMember = async (req, res) => {
 
     let invitationSent = false;
 
-    if (memberStatus === "Active") {
+    if (invitationRequested) {
       try {
         await deliverInvitation({
           userId: result.userId,
@@ -214,11 +248,21 @@ const createMember = async (req, res) => {
       }
     }
 
-    const message = invitationSent
-      ? "Member created. An invitation email was sent so they can set their password."
-      : memberStatus !== "Active"
-      ? "Member created. No invitation was sent because the member is inactive."
-      : 'Member created, but the invitation email could not be sent. Open "Member Access" to resend it.';
+    let message;
+
+    if (invitationSent) {
+      message =
+        "Member created. An invitation email was sent so they can set their password.";
+    } else if (invitationRequested) {
+      message =
+        'Member created, but the invitation email could not be sent. Open "Member Access" to resend it.';
+    } else if (memberStatus !== "Active") {
+      message =
+        "Member created as inactive. No invitation was sent.";
+    } else {
+      message =
+        'Member created. No invitation was sent, so they can\'t sign in yet. Send one from "Member Access" when you are ready.';
+    }
 
     return successResponse(
       res,
@@ -227,6 +271,7 @@ const createMember = async (req, res) => {
         memberId: result.memberId,
         userId: result.userId,
         memberNumber: result.memberNumber,
+        invitationRequested,
         invitationSent,
       },
       201
@@ -279,6 +324,9 @@ const getMemberById = async (req, res) => {
 
 /**
  * Update member
+ *
+ * Admin can edit everyone. A Pastor can edit everyone except
+ * Administrator accounts.
  */
 const updateMember = async (req, res) => {
   try {
@@ -413,6 +461,33 @@ const updateMember = async (req, res) => {
     }
 
     /*
+     * Load the member as it is now. Used for the Administrator
+     * protection and to notice an email change.
+     */
+    const existing = await memberService.getMemberById(id);
+    const requesterIsAdmin = Number(req.user.roleId) === 1;
+
+    if (!requesterIsAdmin && Number(existing.role_id) === 1) {
+      return errorResponse(
+        res,
+        "Only an administrator can edit an administrator account.",
+        403
+      );
+    }
+
+    if (
+      !requesterIsAdmin &&
+      roleId !== undefined &&
+      Number(roleId) === 1
+    ) {
+      return errorResponse(
+        res,
+        "Only an administrator can assign the Admin role.",
+        403
+      );
+    }
+
+    /*
      * Convert removeProfileImage from
      * FormData string to boolean.
      */
@@ -477,6 +552,19 @@ const updateMember = async (req, res) => {
       req.file || null
     );
 
+    /*
+     * If the email address changed, any invitation link or code that
+     * was sent to the old address must stop working.
+     */
+    if (
+      email !== undefined &&
+      normalizeEmail(email) !== normalizeEmail(existing.email || "")
+    ) {
+      for (const type of Object.values(TOKEN_TYPES)) {
+        await deleteUnusedTokensByUserAndType(existing.user_id, type);
+      }
+    }
+
     const updatedMember =
       await memberService.getMemberById(id);
 
@@ -503,12 +591,15 @@ const updateMember = async (req, res) => {
 
 /**
  * Delete member
+ *
+ * Same safety rules as the Member Access page: removes the sign-in
+ * account too, and refuses members who have signed in before.
  */
 const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await memberService.deleteMember(id);
+    await memberAccessService.removeAccount(req.user, Number(id));
 
     return successResponse(
       res,

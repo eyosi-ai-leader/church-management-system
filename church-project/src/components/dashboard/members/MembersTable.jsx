@@ -9,6 +9,8 @@ import {
   Building2,
   Download,
   Eye,
+  Loader2,
+  Mail,
   Pencil,
   Trash2,
   UserRound,
@@ -35,6 +37,45 @@ function getRoleName(member) {
     default:
       return member.role_name || member.roleName || "Member";
   }
+}
+
+/*
+ * Where this person stands with signing in.
+ * Returns null when the list doesn't include sign-in details
+ * (for example the Ministry Leader view).
+ */
+function getAccess(member) {
+  if (member.last_login_at === undefined) return null;
+
+  if (member.last_login_at) {
+    return {
+      label: "Signed in",
+      title: "Has signed in",
+      className: "bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (member.invited_at) {
+    return {
+      label: "Invited",
+      title: "Invitation sent. Waiting for them to set a password.",
+      className: "bg-blue-50 text-blue-700",
+    };
+  }
+
+  if (!member.email_verified_at) {
+    return {
+      label: "Not verified",
+      title: "Email not verified yet",
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  return {
+    label: "Not signed in",
+    title: "Has not signed in yet",
+    className: "bg-slate-100 text-slate-600",
+  };
 }
 
 function SortButton({
@@ -110,6 +151,12 @@ function LoadingRows({ isMinistryLeader }) {
             <div className="h-6 w-16 animate-pulse rounded-full bg-slate-100" />
           </td>
 
+          {!isMinistryLeader && (
+            <td className="px-3 py-4">
+              <div className="h-6 w-20 animate-pulse rounded-full bg-slate-100" />
+            </td>
+          )}
+
           <td className="px-3 py-4">
             <div className="h-3 w-16 animate-pulse rounded bg-slate-100" />
           </td>
@@ -132,10 +179,14 @@ export default function MembersTable({
   onDelete,
   onChangeStatus,
   onChangeRole,
+  onInvite,
+  invitingId = null,
   canManage,
   isMinistryLeader = false,
   onExport,
 }) {
+  const showAccess = !isMinistryLeader;
+
   if (!loading && members.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
@@ -175,7 +226,7 @@ export default function MembersTable({
       <div className="w-full overflow-x-auto">
         <table
           className={`w-full border-collapse ${
-            isMinistryLeader ? "min-w-[1050px]" : "min-w-[950px]"
+            isMinistryLeader ? "min-w-[1050px]" : "min-w-[1080px]"
           }`}
         >
           <thead>
@@ -230,6 +281,14 @@ export default function MembersTable({
                 </span>
               </th>
 
+              {showAccess && (
+                <th className="min-w-[120px] px-3 py-3.5 text-left">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Access
+                  </span>
+                </th>
+              )}
+
               <th className="min-w-[125px] px-3 py-3.5 text-left">
                 <SortButton
                   field="created_at"
@@ -240,7 +299,7 @@ export default function MembersTable({
                 />
               </th>
 
-              <th className="min-w-[100px] px-3 py-3.5 text-right">
+              <th className="min-w-[130px] px-3 py-3.5 text-right">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Actions
                 </span>
@@ -291,6 +350,18 @@ export default function MembersTable({
                 const ministryName = member.ministry_name || "—";
 
                 const phone = member.phone || member.user_phone || "";
+
+                const access = getAccess(member);
+
+                const canInvite =
+                  canManage &&
+                  !isMinistryLeader &&
+                  typeof onInvite === "function" &&
+                  Boolean(access) &&
+                  !member.last_login_at &&
+                  status === "Active";
+
+                const inviting = invitingId === member.id;
 
                 return (
                   <tr
@@ -401,6 +472,22 @@ export default function MembersTable({
                       </span>
                     </td>
 
+                    {/* Access */}
+                    {showAccess && (
+                      <td className="whitespace-nowrap px-3 py-4">
+                        {access ? (
+                          <span
+                            title={access.title}
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold ${access.className}`}
+                          >
+                            {access.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
+
                     {/* Joined date */}
                     <td className="whitespace-nowrap px-3 py-4">
                       <span className="text-xs font-medium text-slate-500">
@@ -420,6 +507,29 @@ export default function MembersTable({
                     {/* Actions */}
                     <td className="whitespace-nowrap px-3 py-4">
                       <div className="flex items-center justify-end gap-0.5">
+                        {canInvite && (
+                          <button
+                            type="button"
+                            title={
+                              member.invited_at
+                                ? "Resend invitation"
+                                : "Send invitation"
+                            }
+                            aria-label={`${
+                              member.invited_at ? "Resend" : "Send"
+                            } invitation to ${fullName}`}
+                            onClick={() => onInvite(member)}
+                            disabled={Boolean(invitingId)}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {inviting ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Mail size={15} />
+                            )}
+                          </button>
+                        )}
+
                         <Link
                           href={`/dashboard/members/${member.id}`}
                           title="View member"

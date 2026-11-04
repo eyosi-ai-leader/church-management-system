@@ -21,6 +21,7 @@ import {
 } from "@/lib/memberApi";
 
 import { canManageMembers } from "@/lib/roles";
+import { inviteMember } from "@/lib/memberAccessApi";
 
 import MembersTable from "./MembersTable";
 import MemberFilters from "./MemberFilters";
@@ -66,6 +67,8 @@ export default function MembersPage() {
 
   const [roleTarget, setRoleTarget] = useState(null);
   const [changingRole, setChangingRole] = useState(false);
+    const [invitingId, setInvitingId] = useState(null);
+  const [notice, setNotice] = useState("");
 
   const [roleId, setRoleId] = useState(null);
   const [userLoaded, setUserLoaded] = useState(false);
@@ -447,6 +450,34 @@ export default function MembersPage() {
     }
   }
 
+    async function handleInvite(member) {
+    if (!canManage || invitingId) {
+      return;
+    }
+
+    const name =
+      [member.first_name, member.last_name].filter(Boolean).join(" ") ||
+      member.email;
+
+    try {
+      setInvitingId(member.id);
+      setError("");
+      setNotice("");
+
+      await inviteMember(member.id);
+
+      setNotice(`An invitation email was sent to ${name}.`);
+      setTimeout(() => setNotice(""), 6000);
+
+      await loadMembers(true);
+    } catch (error) {
+      console.error("Send invitation error:", error);
+      setError(error.message || "Failed to send the invitation.");
+    } finally {
+      setInvitingId(null);
+    }
+  }
+
   const hasFilters =
     Boolean(filters.search) ||
     Boolean(filters.status) ||
@@ -819,6 +850,7 @@ export default function MembersPage() {
       )}
 
       {/* Existing search and filters */}
+
       <MemberFilters
         filters={filters}
         onSearch={handleSearch}
@@ -834,6 +866,14 @@ export default function MembersPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-red-700">
+                      {notice && (
+        <div
+          role="status"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+        >
+          {notice}
+        </div>
+      )}
                 Could not complete the request
               </p>
 
@@ -862,6 +902,8 @@ export default function MembersPage() {
         onDelete={setDeleteTarget}
         onChangeStatus={handleChangeStatus}
         onChangeRole={handleChangeRole}
+        onInvite={handleInvite}
+        invitingId={invitingId}
         canManage={canManage}
         isMinistryLeader={isMinistryLeader}
       />

@@ -1,9 +1,39 @@
 "use client";
 
+const fieldClass = (error) =>
+  `h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
+    error
+      ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+      : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
+  }`;
+
+function Field({ id, label, required, error, children }) {
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-2 block text-sm font-medium text-slate-700"
+      >
+        {label}
+        {required && <span className="text-red-500"> *</span>}
+      </label>
+
+      {children}
+
+      {error && (
+        <p role="alert" className="mt-1.5 text-xs text-red-500">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function MemberPersonalInfo({
   form,
-  errors,
+  errors = {},
   onChange,
+  genderRequired = true,
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -18,136 +48,93 @@ export default function MemberPersonalInfo({
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        {/* First Name */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            First name{" "}
-            <span className="text-red-500">*</span>
-          </label>
-
+        <Field
+          id="firstName"
+          label="First name"
+          required
+          error={errors.firstName}
+        >
           <input
+            id="firstName"
             type="text"
             name="firstName"
             value={form.firstName}
             onChange={onChange}
             placeholder="Enter first name"
-            className={`h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
-              errors.firstName
-                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
-            }`}
+            autoComplete="off"
+            aria-invalid={Boolean(errors.firstName)}
+            className={fieldClass(errors.firstName)}
           />
+        </Field>
 
-          {errors.firstName && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {errors.firstName}
-            </p>
-          )}
-        </div>
-
-        {/* Middle Name */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Middle name
-          </label>
-
+        <Field
+          id="middleName"
+          label="Middle name"
+          error={errors.middleName}
+        >
           <input
+            id="middleName"
             type="text"
             name="middleName"
             value={form.middleName}
             onChange={onChange}
             placeholder="Enter middle name"
-            className={`h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
-              errors.middleName
-                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
-            }`}
+            autoComplete="off"
+            aria-invalid={Boolean(errors.middleName)}
+            className={fieldClass(errors.middleName)}
           />
+        </Field>
 
-          {errors.middleName && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {errors.middleName}
-            </p>
-          )}
-        </div>
-
-        {/* Last Name */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Last name{" "}
-            <span className="text-red-500">*</span>
-          </label>
-
+        <Field
+          id="lastName"
+          label="Last name"
+          required
+          error={errors.lastName}
+        >
           <input
+            id="lastName"
             type="text"
             name="lastName"
             value={form.lastName}
             onChange={onChange}
             placeholder="Enter last name"
-            className={`h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 ${
-              errors.lastName
-                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
-            }`}
+            autoComplete="off"
+            aria-invalid={Boolean(errors.lastName)}
+            className={fieldClass(errors.lastName)}
           />
+        </Field>
 
-          {errors.lastName && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {errors.lastName}
-            </p>
-          )}
-        </div>
-
-        {/* Gender */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Gender
-          </label>
-
+        <Field
+          id="gender"
+          label="Gender"
+          required={genderRequired}
+          error={errors.gender}
+        >
           <select
+            id="gender"
             name="gender"
             value={form.gender}
             onChange={onChange}
-            className={`h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:ring-2 ${
-              errors.gender
-                ? "border-red-300 focus:border-red-400 focus:ring-red-100"
-                : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"
-            }`}
+            aria-invalid={Boolean(errors.gender)}
+            className={fieldClass(errors.gender)}
           >
-            <option value="">
-              Select gender
-            </option>
-
-            <option value="Male">
-              Male
-            </option>
-
-            <option value="Female">
-              Female
-            </option>
+            <option value="">Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
           </select>
+        </Field>
 
-          {errors.gender && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {errors.gender}
-            </p>
-          )}
-        </div>
-
-        {/* Date of Birth */}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
-            Date of birth
-          </label>
-
+        <Field id="dateOfBirth" label="Date of birth">
           <input
+            id="dateOfBirth"
             type="date"
             name="dateOfBirth"
             value={form.dateOfBirth}
             onChange={onChange}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            max={new Date().toISOString().slice(0, 10)}
+            className={fieldClass(false)}
           />
-        </div>
+        </Field>
       </div>
     </div>
   );

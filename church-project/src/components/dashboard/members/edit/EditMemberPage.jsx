@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   Loader2,
+  Lock,
   Save,
 } from "lucide-react";
 
@@ -15,11 +16,14 @@ import {
   updateMember,
 } from "@/lib/memberApi";
 
+import { inviteMember } from "@/lib/memberAccessApi";
 import { canManageMembers } from "@/lib/roles";
 
-import PersonalInformationForm from "./PersonalInformationForm";
-import ChurchInformationForm from "./ChurchInformationForm";
-import AccountInformationForm from "./AccountInformationForm";
+import MemberPhotoEditor from "@/components/dashboard/members/edit/MemberPhotoEditor";
+import MemberPersonalInfo from "@/components/dashboard/members/create/MemberPersonalInfo";
+import MemberContactInfo from "@/components/dashboard/members/create/MemberContactInfo";
+import MemberChurchInfo from "@/components/dashboard/members/create/MemberChurchInfo";
+import AccountInformationForm from "@/components/dashboard/members/edit/AccountInformationForm";
 
 const initialForm = {
   firstName: "",
@@ -30,7 +34,6 @@ const initialForm = {
   gender: "",
   dateOfBirth: "",
   address: "",
-  memberNumber: "",
   roleId: "",
   baptismDate: "",
   status: "Active",
@@ -54,6 +57,25 @@ function getMemberData(result) {
   return result?.data || result;
 }
 
+function toForm(data) {
+  return {
+    firstName: data.first_name || "",
+    middleName: data.middle_name || data.middleName || "",
+    lastName: data.last_name || "",
+    email: data.email || "",
+    phone: data.user_phone || data.phone || "",
+    gender: data.gender || "",
+    dateOfBirth: formatDateForInput(data.date_of_birth),
+    address: data.address || "",
+    roleId:
+      data.role_id !== undefined && data.role_id !== null
+        ? String(data.role_id)
+        : "",
+    baptismDate: formatDateForInput(data.baptism_date),
+    status: data.status || "Active",
+  };
+}
+
 export default function EditMemberPage() {
   const params = useParams();
   const router = useRouter();
@@ -69,20 +91,19 @@ export default function EditMemberPage() {
    * Only Admin and Pastor can edit members.
    */
   const [authorized, setAuthorized] = useState(false);
-  const [checkingAccess, setCheckingAccess] =
-    useState(true);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [currentRoleId, setCurrentRoleId] = useState(null);
 
   const [member, setMember] = useState(null);
   const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState({});
 
-  const [profileImage, setProfileImage] =
-    useState(null);
-
-  const [imagePreview, setImagePreview] =
-    useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -95,8 +116,7 @@ export default function EditMemberPage() {
    */
   useEffect(() => {
     try {
-      const storedUser =
-        localStorage.getItem("user");
+      const storedUser = localStorage.getItem("user");
 
       if (!storedUser) {
         router.replace("/dashboard/members");
@@ -112,6 +132,7 @@ export default function EditMemberPage() {
         return;
       }
 
+      setCurrentRoleId(roleId);
       setAuthorized(true);
     } catch (error) {
       console.error(
@@ -125,10 +146,17 @@ export default function EditMemberPage() {
     }
   }, [router]);
 
+  // Release a temporary photo preview when it changes or the page closes.
+  useEffect(() => {
+    return () => {
+      if (imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   /*
    * Load member information.
-   *
-   * This existing functionality remains unchanged.
    */
   useEffect(() => {
     if (!memberId) {
@@ -140,73 +168,18 @@ export default function EditMemberPage() {
         setLoading(true);
         setError("");
 
-        const result =
-          await getMemberById(memberId);
-
-        const data =
-          getMemberData(result);
+        const result = await getMemberById(memberId);
+        const data = getMemberData(result);
 
         setMember(data);
+        setForm(toForm(data));
 
-        setForm({
-          firstName:
-            data.first_name || "",
-
-          middleName:
-            data.middle_name ||
-            data.middleName ||
-            "",
-
-          lastName:
-            data.last_name || "",
-
-          email:
-            data.email || "",
-
-          phone:
-            data.user_phone ||
-            data.phone ||
-            "",
-
-          gender:
-            data.gender || "",
-
-          dateOfBirth:
-            formatDateForInput(
-              data.date_of_birth
-            ),
-
-          address:
-            data.address || "",
-
-          memberNumber:
-            data.member_number || "",
-
-          roleId:
-            data.role_id !== undefined &&
-            data.role_id !== null
-              ? String(data.role_id)
-              : "",
-
-          baptismDate:
-            formatDateForInput(
-              data.baptism_date
-            ),
-
-          status:
-            data.status || "Active",
-        });
-
-        const existingImage =
-          data.profile_image ||
-          data.profileImage ||
-          "";
-
-        setImagePreview(existingImage);
+        setImagePreview(
+          data.profile_image || data.profileImage || ""
+        );
       } catch (err) {
         setError(
-          err.message ||
-            "Failed to load member information."
+          err.message || "Failed to load member information."
         );
       } finally {
         setLoading(false);
@@ -217,14 +190,16 @@ export default function EditMemberPage() {
   }, [memberId]);
 
   const handleChange = (event) => {
-    const {
-      name,
-      value,
-    } = event.target;
+    const { name, value } = event.target;
 
     setForm((current) => ({
       ...current,
       [name]: value,
+    }));
+
+    setErrors((current) => ({
+      ...current,
+      [name]: "",
     }));
 
     setError("");
@@ -232,8 +207,7 @@ export default function EditMemberPage() {
   };
 
   const handleImageChange = (event) => {
-    const file =
-      event.target.files?.[0];
+    const file = event.target.files?.[0];
 
     if (!file) {
       return;
@@ -246,29 +220,21 @@ export default function EditMemberPage() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError(
-        "Please select a JPG, PNG, or WEBP image."
-      );
+      setError("Please select a JPG, PNG, or WEBP image.");
 
       event.target.value = "";
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError(
-        "Profile image must be smaller than 10MB."
-      );
+      setError("Profile image must be smaller than 10MB.");
 
       event.target.value = "";
       return;
     }
 
     setProfileImage(file);
-
-    const previewUrl =
-      URL.createObjectURL(file);
-
-    setImagePreview(previewUrl);
+    setImagePreview(URL.createObjectURL(file));
 
     setError("");
     setSuccess("");
@@ -280,18 +246,53 @@ export default function EditMemberPage() {
     setError("");
     setSuccess("");
 
-    const input =
-      document.getElementById(
-        "profileImage"
-      );
+    const input = document.getElementById("profileImage");
 
     if (input) {
       input.value = "";
     }
   };
 
+  function validate() {
+    const next = {};
+
+    if (!form.firstName.trim()) {
+      next.firstName = "First name is required.";
+    }
+
+    if (!form.lastName.trim()) {
+      next.lastName = "Last name is required.";
+    }
+
+    if (!form.email.trim()) {
+      next.email = "Email is required.";
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+    ) {
+      next.email = "Enter a valid email address.";
+    }
+
+    if (!form.roleId) {
+      next.roleId = "Role is required.";
+    }
+
+    return next;
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (saving) {
+      return;
+    }
+
+    const validationErrors = validate();
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     try {
       setSaving(true);
@@ -300,71 +301,20 @@ export default function EditMemberPage() {
 
       const formData = new FormData();
 
-      formData.append(
-        "firstName",
-        form.firstName.trim()
-      );
-
-      formData.append(
-        "middleName",
-        form.middleName.trim()
-      );
-
-      formData.append(
-        "lastName",
-        form.lastName.trim()
-      );
-
-      formData.append(
-        "email",
-        form.email.trim()
-      );
-
-      formData.append(
-        "phone",
-        form.phone.trim()
-      );
-
-      formData.append(
-        "gender",
-        form.gender || ""
-      );
-
-      formData.append(
-        "dateOfBirth",
-        form.dateOfBirth || ""
-      );
-
-      formData.append(
-        "address",
-        form.address.trim()
-      );
-
-      formData.append(
-        "memberNumber",
-        form.memberNumber.trim()
-      );
-
-      formData.append(
-        "roleId",
-        String(form.roleId)
-      );
-
-      formData.append(
-        "baptismDate",
-        form.baptismDate || ""
-      );
-
-      formData.append(
-        "status",
-        form.status
-      );
+      formData.append("firstName", form.firstName.trim());
+      formData.append("middleName", form.middleName.trim());
+      formData.append("lastName", form.lastName.trim());
+      formData.append("email", form.email.trim());
+      formData.append("phone", form.phone.trim());
+      formData.append("gender", form.gender || "");
+      formData.append("dateOfBirth", form.dateOfBirth || "");
+      formData.append("address", form.address.trim());
+      formData.append("roleId", String(form.roleId));
+      formData.append("baptismDate", form.baptismDate || "");
+      formData.append("status", form.status);
 
       if (profileImage) {
-        formData.append(
-          "profileImage",
-          profileImage
-        );
+        formData.append("profileImage", profileImage);
       }
 
       formData.append(
@@ -372,46 +322,57 @@ export default function EditMemberPage() {
         imagePreview ? "false" : "true"
       );
 
-      const result =
-        await updateMember(
-          memberId,
-          formData
-        );
+      const result = await updateMember(memberId, formData);
 
-      const updatedMember =
-        getMemberData(result);
+      const updatedMember = getMemberData(result);
 
       if (updatedMember) {
         setMember(updatedMember);
 
-        const updatedImage =
+        setImagePreview(
           updatedMember.profile_image ||
-          updatedMember.profileImage ||
-          "";
-
-        setImagePreview(updatedImage);
+            updatedMember.profileImage ||
+            ""
+        );
       }
 
       setProfileImage(null);
 
-      setSuccess(
-        "Member information updated successfully."
-      );
+      setSuccess("Member information updated successfully.");
 
       setTimeout(() => {
-        router.push(
-          `/dashboard/members/${memberId}`
-        );
-      }, 700);
+        router.push(`/dashboard/members/${memberId}`);
+      }, 900);
     } catch (err) {
-      setError(
-        err.message ||
-          "Failed to update member."
-      );
+      setError(err.message || "Failed to update member.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
   };
+
+  async function handleInvite() {
+    if (inviting || !member) {
+      return;
+    }
+
+    try {
+      setInviting(true);
+      setError("");
+      setSuccess("");
+
+      await inviteMember(member.id);
+
+      setSuccess(`An invitation email was sent to ${member.email}.`);
+
+      const refreshed = await getMemberById(memberId);
+      setMember(getMemberData(refreshed));
+    } catch (err) {
+      setError(err.message || "Failed to send the invitation.");
+    } finally {
+      setInviting(false);
+    }
+  }
 
   /*
    * Show loading state while checking
@@ -442,9 +403,7 @@ export default function EditMemberPage() {
           Unable to load member
         </h2>
 
-        <p className="mt-2 text-sm text-red-600">
-          {error}
-        </p>
+        <p className="mt-2 text-sm text-red-600">{error}</p>
 
         <Link
           href="/dashboard/members"
@@ -456,6 +415,37 @@ export default function EditMemberPage() {
       </div>
     );
   }
+
+  const isAdmin = currentRoleId === 1;
+
+  // Only an administrator can edit an administrator account.
+  if (!isAdmin && Number(member?.role_id) === 1) {
+    return (
+      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <Lock className="mx-auto h-10 w-10 text-slate-300" aria-hidden="true" />
+
+        <h1 className="mt-4 text-xl font-semibold text-slate-900">
+          Administrator account
+        </h1>
+
+        <p className="mt-2 text-sm text-slate-500">
+          Only an administrator can edit this account.
+        </p>
+
+        <Link
+          href={`/dashboard/members/${memberId}`}
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          <ArrowLeft size={16} />
+          Back to member
+        </Link>
+      </div>
+    );
+  }
+
+  const emailChanged =
+    form.email.trim().toLowerCase() !==
+    String(member?.email || "").trim().toLowerCase();
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -486,7 +476,10 @@ export default function EditMemberPage() {
       {/* Error */}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+        >
           {error}
         </div>
       )}
@@ -494,7 +487,10 @@ export default function EditMemberPage() {
       {/* Success */}
 
       {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700"
+        >
           <Check size={16} />
           {success}
         </div>
@@ -502,24 +498,45 @@ export default function EditMemberPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5"
+        noValidate
+        className="space-y-6"
       >
-        <PersonalInformationForm
+        <MemberPhotoEditor
           form={form}
-          onChange={handleChange}
           profileImage={profileImage}
           imagePreview={imagePreview}
           onImageChange={handleImageChange}
           onRemoveImage={handleRemoveImage}
         />
 
-        <ChurchInformationForm
+        <MemberPersonalInfo
           form={form}
+          errors={errors}
           onChange={handleChange}
+          genderRequired={false}
+        />
+
+        <MemberContactInfo
+          form={form}
+          errors={errors}
+          onChange={handleChange}
+        />
+
+        <MemberChurchInfo
+          form={form}
+          errors={errors}
+          onChange={handleChange}
+          isAdmin={isAdmin}
+          memberNumber={member?.member_number || ""}
+          showInvitation={false}
         />
 
         <AccountInformationForm
           member={member}
+          canInvite
+          emailChanged={emailChanged}
+          inviting={inviting}
+          onInvite={handleInvite}
         />
 
         {/* Actions */}
@@ -539,10 +556,7 @@ export default function EditMemberPage() {
           >
             {saving ? (
               <>
-                <Loader2
-                  size={16}
-                  className="animate-spin"
-                />
+                <Loader2 size={16} className="animate-spin" />
                 Saving...
               </>
             ) : (
@@ -571,11 +585,11 @@ function LoadingState() {
         </div>
       </div>
 
+      <div className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white" />
+
       <div className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white" />
 
       <div className="h-52 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-
-      <div className="h-48 animate-pulse rounded-2xl border border-slate-200 bg-white" />
     </div>
   );
 }
