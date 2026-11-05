@@ -236,11 +236,10 @@ const navigationByRole = {
           icon: Church,
           comingSoon: true,
         },
-        {
-          name: "My Events",
-          href: "/dashboard/my-events",
+         {
+          name: "Events",
+          href: "/dashboard/events",
           icon: CalendarDays,
-          comingSoon: true,
         },
         {
           name: "My Attendance",

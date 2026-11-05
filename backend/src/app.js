@@ -32,6 +32,10 @@ const memberAccessRoutes = require("./routes/memberAccessRoutes");
 
 const invitationRoutes = require("./routes/invitationRoutes");
 
+const eventRoutes = require("./routes/eventRoutes");
+
+const publicEventRoutes = require("./routes/publicEventRoutes");
+
 const app = express();
 
 // Security
@@ -87,6 +91,10 @@ app.use("/api/inbox", inboxRoutes);
 app.use("/api/member-access", memberAccessRoutes);
 
 app.use("/api/invitations", invitationRoutes);
+
+app.use("/api/events", eventRoutes);
+
+app.use("/api/public/events", publicEventRoutes);
 /**
  * Global Error Handler
  *

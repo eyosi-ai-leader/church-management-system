@@ -1,10 +1,15 @@
-import EventsComingSoon from "@/components/dashboard/events/EventsComingSoon";
+import { Suspense } from "react";
+
+import EventsPage from "@/components/dashboard/events/EventsPage";
 
 export const metadata = {
-  title: "Events | CHMS",
-  description: "Church events and activities management is coming soon.",
+  title: "Events",
 };
 
-export default function EventsPage() {
-  return <EventsComingSoon />;
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <EventsPage />
+    </Suspense>
+  );
 }
