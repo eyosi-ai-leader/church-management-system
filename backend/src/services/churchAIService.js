@@ -100,8 +100,8 @@ async function getContext(question, authenticatedUser) {
    * "Tell me about the members of Children Ministry."
    * "Show each member's email and phone number."
    */
-  const asksForRoster =
-    /\b(roster|who belongs|list people|show.*members?|members?\s+of|member\s+of|member\s+list|list.*members?|who are the members|member details|members?' details|member information|members' information|contact details|phone numbers|email addresses|member profiles|all members|every member|minister members?|ministry members?|tell me about.*members?|what about.*members?|what about.*minister)\b/i.test(
+    const asksForRoster =
+    /\b(roster|who belongs|list people|show.*members?|members?\s+of|member\s+of|member\s+list|member\s+names?|members?\s+names?|names?\s+of|names?\s+list|name\s+list|list\s+of|list.*members?|who\s+are\s+the\s+members|who\s+is\s+in|people\s+in|member details|members?' details|member information|members' information|contact details|phone numbers|email addresses|member profiles|all members|every member|minister members?|ministry members?|tell me about.*members?|what about.*members?|what about.*minister|names?)\b/i.test(
       text
     );
 
@@ -249,7 +249,7 @@ async function getContext(question, authenticatedUser) {
    * Prefer the longest matching ministry name to avoid a shorter
    * ministry name being selected when names overlap.
    */
-  const ministry = availableMinistries
+    let ministry = availableMinistries
     .filter(
       (item) =>
         item?.name &&
@@ -259,6 +259,11 @@ async function getContext(question, authenticatedUser) {
       (a, b) =>
         String(b.name).length - String(a.name).length
     )[0];
+
+  // A leader with exactly one ministry can just ask "show my members"
+  if (!ministry && isLeader && leaderMinistries.length === 1) {
+    ministry = leaderMinistries[0];
+  }
 
   if (ministry) {
     context.selectedMinistry = ministry;

@@ -145,7 +145,8 @@ ${churchData.note || "No additional note."}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-3.5-turbo",
+      
+                model: process.env.OPENROUTER_MODEL || "openrouter/free",
         messages: [
           {
             role: "system",
@@ -161,13 +162,15 @@ ${churchData.note || "No additional note."}
 
     const aiResult = await aiResponse.json();
 
-    if (!aiResponse.ok) {
-      console.error("Church AI OpenRouter error:", aiResult);
+       if (!aiResponse.ok) {
+      console.error("Church AI OpenRouter error:", aiResponse.status, JSON.stringify(aiResult));
 
       return NextResponse.json(
         {
           success: false,
-          message: "The AI service could not generate a response.",
+          message:
+            aiResult?.error?.message ||
+            "The AI service could not generate a response.",
         },
         { status: 502 }
       );

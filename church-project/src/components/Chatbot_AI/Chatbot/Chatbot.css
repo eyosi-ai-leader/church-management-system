@@ -221,8 +221,11 @@
   right: 28px;
   bottom: 96px;
 
-  width: 380px;
-  height: 590px;
+    width: 380px;
+  height: 560px;
+  height: min(560px, calc(100dvh - 130px));
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
 
   display: flex;
   flex-direction: column;
@@ -826,9 +829,9 @@
 
     bottom: 88px;
 
-    width: 360px;
+        width: 360px;
 
-    height: 570px;
+    height: min(540px, calc(100dvh - 120px));
   }
 }
 
@@ -860,7 +863,8 @@
 
     height: 100%;
 
-    max-height: 100vh;
+        max-height: 100vh;
+    max-height: 100dvh;
 
     border-radius: 0;
 
@@ -1020,7 +1024,31 @@
   outline-offset: 3px;
 }
 
+/* =========================================================
+   SHORT SCREENS (small laptops)
+   ========================================================= */
 
+@media (max-height: 700px) and (min-width: 521px) {
+  .chatbot-popup {
+    bottom: 88px;
+    height: calc(100dvh - 110px);
+    max-height: 540px;
+  }
+
+  .chatbot-popup .chat-header {
+    min-height: 60px;
+    padding: 10px 16px;
+  }
+
+  .chat-body {
+    padding: 16px 16px 8px;
+    gap: 12px;
+  }
+
+  .chat-footer {
+    padding: 8px 12px 12px;
+  }
+} 
 /* =========================================================
    REDUCED MOTION
    ========================================================= */
